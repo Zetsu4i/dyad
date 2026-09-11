@@ -147,6 +147,21 @@ async function buildMcpTools(
   return { tools, serverSummaries: summaries, errors };
 }
 
+/** Adds actionable context to provider/network failures. */
+function friendlyModelError(message: string): string {
+  const networkish =
+    /fetch failed|ENOTFOUND|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|Unable to connect|terminated|network/i.test(
+      message,
+    );
+  if (!networkish) return message;
+  return (
+    `${message}\n\nThis looks like a network problem reaching the model endpoint. ` +
+    `Check the provider's base URL and API key in Settings → Providers ` +
+    `(test with "Pull models"), or switch the model picker to the offline ` +
+    `Demo builder to try the full pipeline without a provider.`
+  );
+}
+
 async function resolveModel(
   modelKey: string | null | undefined,
 ): Promise<{ model: LanguageModel; label: string }> {
