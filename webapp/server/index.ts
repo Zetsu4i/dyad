@@ -74,8 +74,16 @@ function parseCookies(req: express.Request): Record<string, string> {
   }));
 }
 
+function getTokenFromRequest(req: express.Request): string | undefined {
+  // Bearer tokens work inside cross-site preview iframes where browsers
+  // refuse to store SameSite cookies.
+  const auth = req.headers.authorization;
+  if (auth?.startsWith("Bearer ")) return auth.slice(7).trim();
+  return parseCookies(req)[COOKIE];
+}
+
 function currentUser(req: express.Request): User | null {
-  const token = parseCookies(req)[COOKIE];
+  const token = getTokenFromRequest(req);
   if (!token) return null;
   const session = store.sessions[token];
   if (!session || new Date(session.expiresAt) < new Date()) return null;
@@ -176,8 +184,8 @@ app.post("/api/auth/register", (req, res) => {
     save("models");
     save("settings");
   }
-  setSession(res, user.id);
-  res.json({ user: publicUser(user) });
+  const token = setSession(req, res, user.id);
+  res.json({ user: publicUser(user), token });
 });
 
 app.post("/api/auth/login", (req, res) => {
@@ -187,20 +195,20 @@ app.post("/api/auth/login", (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
   if (!store.settings[user.id]) store.settings[user.id] = defaultSettings(user.id);
-  setSession(res, user.id);
-  res.json({ user: publicUser(user) });
+  const token = setSession(req, res, user.id);
+  res.json({ user: publicUser(user), token });
 });
 
 app.post("/api/auth/logout", (req, res) => {
-  const token = parseCookies(req)[COOKIE];
-  if (token) {
+  const token = getTokenFromRequest(req);
+  if (token && store.sessions[token]) {
     delete store.sessions[token];
     save("sessions");
   }
   res.clearCookie(COOKIE).json({ ok: true });
 });
 
-function setSession(res: express.Response, userId: string) {
+function setSession(req: express.Request, res: express.Response, userId: string): string {
   const token = uid("ses_");
   store.sessions[token] = {
     token,
@@ -208,7 +216,15 @@ function setSession(res: express.Response, userId: string) {
     expiresAt: new Date(Date.now() + 30 * 24 * 3600_000).toISOString(),
   };
   save("sessions");
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: "lax", maxAge: 30 * 24 * 3600_000 });
+  // Cross-site preview iframes require SameSite=None; Secure to store cookies.
+  const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https";
+  res.cookie(COOKIE, token, {
+    httpOnly: true,
+    sameSite: isHttps ? "none" : "lax",
+    secure: isHttps,
+    maxAge: 30 * 24 * 3600_000,
+  });
+  return token;
 }
 
 function publicUser(u: User) {

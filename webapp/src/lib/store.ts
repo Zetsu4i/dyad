@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "./api";
+import { api, setAuthToken } from "./api";
 
 export interface CurrentUser {
   id: string;
@@ -26,6 +26,7 @@ interface AppState {
   setUser: (u: CurrentUser | null) => void;
   checkAuth: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -37,10 +38,11 @@ export const useAppStore = create<AppState>((set) => ({
     try {
       const { user } = await api.get<{ user: CurrentUser }>("/api/auth/me");
       set({ user, authChecked: true });
-      api.get<{ user: CurrentUser; [k: string]: unknown }>("/api/settings").then((s) =>
+      api.get<Record<string, unknown>>("/api/settings").then((s) =>
         set({ settings: s as unknown as AppSettings }),
       ).catch(() => {});
     } catch {
+      setAuthToken(null);
       set({ user: null, authChecked: true });
     }
   },
@@ -48,7 +50,18 @@ export const useAppStore = create<AppState>((set) => ({
     const s = await api.get<Record<string, unknown>>("/api/settings");
     set({ settings: s as unknown as AppSettings });
   },
+  logout: async () => {
+    try {
+      await api.post("/api/auth/logout");
+    } catch { /* ignore */ }
+    setAuthToken(null);
+    set({ user: null, settings: null });
+  },
 }));
+
+export function useLogout() {
+  return useAppStore((s) => s.logout);
+}
 
 // ---- Toasts -----------------------------------------------------------------
 

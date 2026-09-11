@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
-import { toast, useAppStore } from "../lib/store";
+import { toast, useAppStore, useLogout } from "../lib/store";
 import { Dialog, Select, Spinner, StatusDot } from "../components/ui";
 import { Logo } from "./Login";
-import { Boxes, Plus, Settings, Sparkles, Trash2, RefreshCw, Zap } from "lucide-react";
+import { Boxes, LogOut, Plus, Settings, Sparkles, Trash2, RefreshCw, Zap } from "lucide-react";
 
 interface AppRow {
   id: string;
@@ -19,6 +19,7 @@ interface AppRow {
 
 export default function Dashboard() {
   const { user, settings, loadSettings } = useAppStore();
+  const signOut = useLogout();
   const [apps, setApps] = useState<AppRow[] | null>(null);
   const [showNew, setShowNew] = useState(false);
   const navigate = useNavigate();
@@ -50,7 +51,10 @@ export default function Dashboard() {
             <Link to="/settings" className="btn-secondary btn-sm">
               <Settings size={13} /> Settings
             </Link>
-            <div className="ml-1 flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-2xs font-semibold text-accent ring-1 ring-accent/30" title={user?.email}>
+            <button className="btn-ghost !h-7 !px-1.5" title="Sign out" onClick={signOut}>
+              <LogOut size={13} />
+            </button>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-2xs font-semibold text-accent ring-1 ring-accent/30" title={user?.email}>
               {(user?.name ?? user?.email ?? "?").slice(0, 1).toUpperCase()}
             </div>
           </div>

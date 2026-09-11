@@ -7,15 +7,40 @@ export class ApiError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Auth token — the preview runs inside a cross-site iframe where browsers may
+// refuse to store SameSite cookies, so we keep the session token in
+// localStorage and send it as an Authorization header alongside the cookie.
+// ---------------------------------------------------------------------------
+
+const TOKEN_KEY = "dc_token";
+
+export function setAuthToken(token: string | null | undefined) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* storage unavailable */ }
+}
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
-    headers: { "content-type": "application/json" },
+    credentials: "same-origin",
     ...init,
+    headers: { "content-type": "application/json", ...authHeaders(), ...init?.headers },
   });
-  if (res.status === 401 && !path.startsWith("/api/auth")) {
-    window.location.href = "/login";
-    throw new ApiError(401, "Not signed in");
-  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(res.status, (data as any).error ?? `Request failed (${res.status})`);
   return data as T;
@@ -44,7 +69,8 @@ export async function streamPost(
 ): Promise<void> {
   const res = await fetch(path, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    credentials: "same-origin",
+    headers: { "content-type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
     signal,
   });

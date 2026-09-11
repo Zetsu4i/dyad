@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { api } from "../lib/api";
+import { api, setAuthToken } from "../lib/api";
 import { useAppStore, toast } from "../lib/store";
 import { Spinner } from "../components/ui";
 import { Box, Cloud, Hammer, MessageSquareCode, Plug, ShieldCheck, Sparkles, Wrench } from "lucide-react";
@@ -16,7 +16,8 @@ export default function Login() {
     setBusy(true);
     try {
       const path = mode === "signin" ? "/api/auth/login" : "/api/auth/register";
-      const { user } = await api.post<{ user: any }>(path, { email, password });
+      const { user, token } = await api.post<{ user: any; token?: string }>(path, { email, password });
+      if (token) setAuthToken(token);
       setUser(user);
       toast("success", mode === "signin" ? "Welcome back" : "Workspace created");
     } catch (err: any) {
