@@ -2,6 +2,19 @@
 
 Dyad is a local, open-source AI app builder. It's fast, private, and fully under your control — like Lovable, v0, or Bolt, but running right on your machine.
 
+> ## ☁️ Dyad Cloud — SaaS web edition (in this repo)
+>
+> **`webapp/`** contains a fully web-based SaaS distribution of Dyad built on
+> the same agent core: the Electron shell is stripped, apps are built and
+> hosted in **E2B cloud sandboxes** (user-provided key), and it adds a
+> settings dashboard for **OpenAI-/Anthropic-compatible providers** (custom
+> base URL + key + model list pull), **MCP servers** and **skills** — all in
+> an enterprise dark UI. See [`webapp/README.md`](./webapp/README.md).
+>
+> ```bash
+> cd webapp && npm install && npm run dev   # → http://localhost:3000
+> ```
+
 [![Image](https://github.com/user-attachments/assets/f6c83dfc-6ffd-4d32-93dd-4b9c46d17790)](https://dyad.sh/)
 
 More info at: [https://dyad.sh/](https://dyad.sh/)
