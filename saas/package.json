@@ -1,0 +1,36 @@
+{
+  "name": "dyad-saas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dyad SaaS — web-based AI app builder. E2B sandboxes, MCP + Skills, OpenAI/Anthropic-compatible providers.",
+  "type": "module",
+  "scripts": {
+    "dev:server": "node server/index.mjs",
+    "dev:client": "npm --prefix client run dev",
+    "dev": "concurrently -n server,client \"npm run dev:server\" \"npm run dev:client\"",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:client",
+    "start": "node server/index.mjs",
+    "test:api": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@e2b/code-interpreter": "^1.5.1",
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "lucide-react": "^0.462.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-router-dom": "^6.30.0",
+    "tailwindcss": "^4.1.3",
+    "typescript": "^5.5.3",
+    "vite": "^6.0.0"
+  }
+}
