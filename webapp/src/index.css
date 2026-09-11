@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-surface-0 text-ink antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border border-line bg-surface-2 shadow-panel;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:pointer-events-none disabled:opacity-45 select-none;
+  }
+  .btn-primary {
+    @apply btn bg-zinc-100 text-zinc-900 hover:bg-white px-3.5 h-9;
+  }
+  .btn-secondary {
+    @apply btn bg-surface-4 text-ink-dim hover:bg-[#303035] hover:text-ink px-3.5 h-9 border border-line;
+  }
+  .btn-ghost {
+    @apply btn text-ink-mute hover:text-ink hover:bg-surface-3 px-3 h-9;
+  }
+  .btn-danger {
+    @apply btn bg-transparent text-err hover:bg-err/10 border border-err/25 px-3.5 h-9;
+  }
+  .btn-sm {
+    @apply h-7.5 px-2.5 text-xs;
+  }
+  .input {
+    @apply w-full h-9 rounded-md border border-line bg-surface-1 px-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-line-strong transition-shadow;
+  }
+  .label {
+    @apply block text-xs font-medium text-ink-mute mb-1.5;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium;
+  }
+  .tab {
+    @apply inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-sm text-ink-mute hover:text-ink hover:bg-surface-3 cursor-pointer transition-colors;
+  }
+  .tab-active {
+    @apply text-ink bg-surface-4;
+  }
+  .card-title {
+    @apply text-sm font-semibold text-ink;
+  }
+  .hint {
+    @apply text-xs text-ink-faint leading-relaxed;
+  }
+}
+
+/* Markdown body inside chat messages */
+.md {
+  @apply text-sm text-ink-dim leading-relaxed break-words;
+}
+.md > * + * {
+  @apply mt-2.5;
+}
+.md h1, .md h2, .md h3, .md h4 {
+  @apply text-ink font-semibold;
+}
+.md h1 { @apply text-base; } .md h2 { @apply text-[15px]; } .md h3 { @apply text-sm; }
+.md p { @apply whitespace-pre-wrap; }
+.md ul { @apply list-disc pl-5 space-y-1; }
+.md ol { @apply list-decimal pl-5 space-y-1; }
+.md code {
+  @apply font-mono text-[12.5px] bg-surface-4 rounded px-1.5 py-0.5 text-ink;
+}
+.md pre {
+  @apply bg-surface-1 border border-line rounded-md p-3 overflow-x-auto;
+}
+.md pre code {
+  @apply bg-transparent p-0 text-[12.5px] text-ink-dim;
+}
+.md a {
+  @apply text-accent underline underline-offset-2;
+}
+.md blockquote {
+  @apply border-l-2 border-line-strong pl-3 text-ink-mute;
+}
+.md table { @apply w-full text-xs border-collapse; }
+.md th, .md td { @apply border border-line px-2 py-1 text-left; }
+.md th { @apply bg-surface-3 text-ink; }
+.md hr { @apply border-line; }

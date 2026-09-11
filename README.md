@@ -32,3 +32,18 @@ If you're interested in contributing to dyad, please read our [contributing](./C
 
 - All the code in this repo outside of `src/pro` is open-source and licensed under Apache 2.0 - see [LICENSE](./LICENSE).
 - All the code in this repo within `src/pro` is fair-source and licensed under [Functional Source License 1.1 Apache 2.0](https://fsl.software/) - see [LICENSE](./src/pro/LICENSE).
+
+
+---
+
+## Dyad Cloud (web SaaS edition)
+
+This repository also contains **`webapp/`** — a fully web-based, cloud-hosted rebuild of Dyad:
+
+- No Electron. A React + Express web app you deploy once and use from the browser.
+- Apps run in isolated **E2B cloud sandboxes** (bring your own E2B key) with live preview URLs.
+- **Bring-your-own model providers**: any OpenAI-compatible or Anthropic-compatible base URL + key, with model-list pulling and per-chat model selection.
+- **MCP servers & Skills** with a management dashboard and one-click install into each app's sandbox.
+- The agent prompts, tool set, and MCP consent policy are ported from the upstream Dyad source in this repo (`src/prompts`, `src/pro/main/.../local_agent`).
+
+See [`webapp/README.md`](webapp/README.md) for architecture and quickstart.
