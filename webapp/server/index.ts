@@ -82,18 +82,57 @@ function getTokenFromRequest(req: express.Request): string | undefined {
   return parseCookies(req)[COOKIE];
 }
 
-function currentUser(req: express.Request): User | null {
-  const token = getTokenFromRequest(req);
-  if (!token) return null;
-  const session = store.sessions[token];
-  if (!session || new Date(session.expiresAt) < new Date()) return null;
-  return store.users.find((u) => u.id === session.userId) ?? null;
+// ---------------------------------------------------------------------------
+// Demo mode: authentication is disabled for this MVP deployment. Every request
+// runs against a single auto-provisioned workspace so the product works
+// everywhere (including sandboxed preview iframes that block cookies and
+// storage). Real auth can be layered back in later.
+// ---------------------------------------------------------------------------
+
+let demoUserCache: User | null = null;
+
+function ensureDemoUser(): User {
+  if (demoUserCache) return demoUserCache;
+  let user = store.users.find((u) => u.id === "user_demo");
+  if (!user) {
+    user = {
+      id: "user_demo",
+      email: "demo@dyad.cloud",
+      name: "Demo",
+      passwordHash: "",
+      createdAt: new Date().toISOString(),
+    };
+    store.users.push(user);
+    store.settings[user.id] = defaultSettings(user.id);
+    // Adopt the preconfigured starter provider + model.
+    for (const p of store.providers) if (p.userId === "__seed__") p.userId = user!.id;
+    for (const m of store.models) if (m.userId === "__seed__") m.userId = user!.id;
+    const seedModel = store.models.find((m) => m.userId === user!.id && m.enabled);
+    if (seedModel) {
+      store.settings[user.id].defaultModel = `${seedModel.providerId}:${seedModel.apiName}`;
+    }
+    save("users");
+    save("settings");
+    save("providers");
+    save("models");
+  } else if (!store.settings[user.id]) {
+    store.settings[user.id] = defaultSettings(user.id);
+    save("settings");
+  }
+  demoUserCache = user;
+  return user;
 }
 
-function requireUser(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const user = currentUser(req);
-  if (!user) return res.status(401).json({ error: "Not signed in" });
-  (req as any).user = user;
+function currentUser(_req: express.Request): User | null {
+  try {
+    return ensureDemoUser();
+  } catch {
+    return null;
+  }
+}
+
+function requireUser(req: express.Request, _res: express.Response, next: express.NextFunction) {
+  (req as any).user = currentUser(req);
   next();
 }
 
@@ -232,9 +271,7 @@ function publicUser(u: User) {
 }
 
 app.get("/api/auth/me", (req, res) => {
-  const user = currentUser(req);
-  if (!user) return res.status(401).json({ error: "Not signed in" });
-  res.json({ user: publicUser(user) });
+  res.json({ user: publicUser(ensureDemoUser()) });
 });
 
 // ---------------------------------------------------------------------------

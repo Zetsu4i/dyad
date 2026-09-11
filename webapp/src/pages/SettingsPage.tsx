@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
-import { toast, useAppStore, useLogout } from "../lib/store";
+import { toast, useAppStore } from "../lib/store";
 import { Dialog, Select, Spinner, Switch, Tabs } from "../components/ui";
-import { Logo } from "./Login";
+import { Logo } from "../components/Logo";
 import {
-  Check, ChevronDown, Cloud, CreditCard, Cpu, KeyRound, LogOut, Plug, Plus, RefreshCw, Save,
+  Check, ChevronDown, Cloud, CreditCard, Cpu, KeyRound, Plug, Plus, RefreshCw, Save,
   Server, Sparkles, Star, Trash2, TriangleAlert, Wrench,
 } from "lucide-react";
 
@@ -68,7 +68,6 @@ const TABS = [
 export default function SettingsPage() {
   const [params] = useSearchParams();
   const [tab, setTab] = useState(params.get("tab") ?? "general");
-  const signOut = useLogout();
 
   return (
     <div className="min-h-full">
@@ -78,12 +77,7 @@ export default function SettingsPage() {
             <Logo size={26} />
             <span className="text-sm font-semibold tracking-tight">Dyad Cloud</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/" className="btn-secondary btn-sm">Back to apps</Link>
-            <button className="btn-ghost !h-7 !px-1.5" title="Sign out" onClick={signOut}>
-              <LogOut size={13} />
-            </button>
-          </div>
+          <Link to="/" className="btn-secondary btn-sm">Back to apps</Link>
         </div>
       </header>
 

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, setAuthToken } from "./api";
+import { api } from "./api";
 
 export interface CurrentUser {
   id: string;
@@ -23,45 +23,37 @@ interface AppState {
   user: CurrentUser | null;
   authChecked: boolean;
   settings: AppSettings | null;
-  setUser: (u: CurrentUser | null) => void;
   checkAuth: () => Promise<void>;
   loadSettings: () => Promise<void>;
-  logout: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   user: null,
   authChecked: false,
   settings: null,
-  setUser: (u) => set({ user: u }),
+  // Demo mode: the server always returns the workspace user — no login.
   checkAuth: async () => {
     try {
       const { user } = await api.get<{ user: CurrentUser }>("/api/auth/me");
       set({ user, authChecked: true });
-      api.get<Record<string, unknown>>("/api/settings").then((s) =>
-        set({ settings: s as unknown as AppSettings }),
-      ).catch(() => {});
     } catch {
-      setAuthToken(null);
-      set({ user: null, authChecked: true });
+      // Even if the ping fails, never show a login gate — enter the app and
+      // let individual views surface errors.
+      set({
+        user: { id: "user_demo", email: "demo@dyad.cloud", name: "Demo" },
+        authChecked: true,
+      });
     }
+    api
+      .get<Record<string, unknown>>("/api/settings")
+      .then((s) => set({ settings: s as unknown as AppSettings }))
+      .catch(() => {});
   },
   loadSettings: async () => {
     const s = await api.get<Record<string, unknown>>("/api/settings");
     set({ settings: s as unknown as AppSettings });
   },
-  logout: async () => {
-    try {
-      await api.post("/api/auth/logout");
-    } catch { /* ignore */ }
-    setAuthToken(null);
-    set({ user: null, settings: null });
-  },
 }));
-
-export function useLogout() {
-  return useAppStore((s) => s.logout);
-}
 
 // ---- Toasts -----------------------------------------------------------------
 

@@ -1,11 +1,10 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAppStore, useLogout } from "../lib/store";
-import { Logo } from "../pages/Login";
+import { useAppStore } from "../lib/store";
+import { Logo } from "./Logo";
 import {
   Boxes,
   LayoutDashboard,
-  LogOut,
   Plug,
   Settings,
   Hammer,
@@ -22,8 +21,7 @@ const NAV = [
 
 export default function Sidebar() {
   const location = useLocation();
-  const { user, settings } = useAppStore();
-  const signOut = useLogout();
+  const { settings } = useAppStore();
 
   const isActive = (item: (typeof NAV)[number]) =>
     item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to);
@@ -106,19 +104,12 @@ export default function Sidebar() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent ring-1 ring-accent/30">
-            {(user?.name ?? user?.email ?? "?").slice(0, 1).toUpperCase()}
+            D
           </div>
           <div className="min-w-0 flex-1 leading-tight">
-            <div className="truncate text-[12px] font-medium text-ink-dim">{user?.name}</div>
-            <div className="truncate text-[10px] text-ink-faint">{user?.email}</div>
+            <div className="truncate text-[12px] font-medium text-ink-dim">Workspace</div>
+            <div className="truncate text-[10px] text-ink-faint">demo mode</div>
           </div>
-          <button
-            className="btn-ghost !h-7 !px-1.5"
-            title="Sign out"
-            onClick={signOut}
-          >
-            <LogOut size={13} />
-          </button>
         </div>
       </div>
     </aside>

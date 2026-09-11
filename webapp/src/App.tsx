@@ -1,10 +1,8 @@
 import React, { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { initAuthToken } from "./lib/api";
 import { useAppStore } from "./lib/store";
 import { Spinner, Toasts } from "./components/ui";
 import Sidebar from "./components/Sidebar";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Build from "./pages/Build";
 import MyApps from "./pages/MyApps";
@@ -13,9 +11,8 @@ import Integrations from "./pages/Integrations";
 import SettingsPage from "./pages/SettingsPage";
 
 export default function App() {
-  const { user, authChecked, checkAuth } = useAppStore();
+  const { authChecked, checkAuth } = useAppStore();
   useEffect(() => {
-    initAuthToken();
     checkAuth();
   }, [checkAuth]);
 
@@ -24,17 +21,6 @@ export default function App() {
       <div className="flex h-full items-center justify-center">
         <Spinner size={20} className="text-ink-faint" />
       </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <BrowserRouter>
-        <Routes>
-          <Route path="*" element={<Login />} />
-        </Routes>
-        <Toasts />
-      </BrowserRouter>
     );
   }
 
