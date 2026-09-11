@@ -93,7 +93,7 @@ export default function Dashboard() {
           {ready && apps!.length === 0 && (
             <button
               onClick={() => setShowNew(true)}
-              className="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed border-line-strong py-20 text-center transition-colors hover:border-accent/50 hover:bg-accent-soft/40"
+              className="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed border-line-strong py-20 text-center transition-colors hover:border-accent/50 hover:bg-accent-soft"
             >
               <Boxes size={28} className="text-ink-faint" />
               <div className="mt-3 text-sm font-medium text-ink">Create your first app</div>

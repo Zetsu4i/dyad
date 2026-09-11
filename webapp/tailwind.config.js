@@ -1,29 +1,28 @@
-import type { Config } from "tailwindcss";
-
+/** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         surface: {
-          0: "#09090b", // zinc-950 page background
-          1: "#101013", // raised
-          2: "#18181b", // zinc-900 panel
-          3: "#1f1f23", // panel hover
-          4: "#27272a", // zinc-800 border/elevated
+          0: "#09090b",
+          1: "#101013",
+          2: "#18181b",
+          3: "#1f1f23",
+          4: "#27272a",
         },
         line: {
           DEFAULT: "#27272a",
           strong: "#3f3f46",
         },
         ink: {
-          DEFAULT: "#fafafa", // zinc-50
-          dim: "#d4d4d8", // zinc-300
-          mute: "#a1a1aa", // zinc-400
-          faint: "#71717a", // zinc-500
+          DEFAULT: "#fafafa",
+          dim: "#d4d4d8",
+          mute: "#a1a1aa",
+          faint: "#71717a",
         },
         accent: {
-          DEFAULT: "#818cf8", // indigo-400 — restrained brand accent
+          DEFAULT: "#818cf8",
           strong: "#6366f1",
           soft: "rgba(99,102,241,0.12)",
         },
@@ -44,6 +43,10 @@ export default {
         ],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
+      spacing: {
+        "4.5": "1.125rem",
+        "7.5": "1.875rem",
+      },
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
@@ -54,7 +57,7 @@ export default {
       animation: {
         "fade-in": "fadeIn .18s ease-out",
         "slide-up": "slideUp .22s cubic-bezier(0.16,1,0.3,1)",
-        pulse-soft: "pulseSoft 2s ease-in-out infinite",
+        "pulse-soft": "pulseSoft 2s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: { from: { opacity: "0" }, to: { opacity: "1" } },
@@ -64,4 +67,4 @@ export default {
     },
   },
   plugins: [],
-} satisfies Config;
+};
