@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
-import { toast, useAppStore, useLogout } from "../lib/store";
-import { Dialog, Select, Spinner, StatusDot } from "../components/ui";
-import { Logo } from "./Login";
-import { Boxes, LogOut, Plus, Settings, Sparkles, Trash2, RefreshCw, Zap } from "lucide-react";
+import { useAppStore } from "../lib/store";
+import { timeAgo } from "../lib/util";
+import { Spinner, StatusDot } from "../components/ui";
+import {
+  ArrowRight, Boxes, Check, Hammer, Plug, Sparkles, Plus, Wrench, Zap,
+} from "lucide-react";
 
 interface AppRow {
   id: string;
@@ -12,271 +14,176 @@ interface AppRow {
   description: string;
   emoji: string;
   updatedAt: string;
-  sandbox: { status: string; mode: string; previewUrl?: string; lastError?: string };
-  fileCount?: number;
+  sandbox: { status: string; mode: string };
   config: { installedMcpServerIds: string[]; installedSkillIds: string[] };
 }
 
 export default function Dashboard() {
-  const { user, settings, loadSettings } = useAppStore();
-  const signOut = useLogout();
-  const [apps, setApps] = useState<AppRow[] | null>(null);
-  const [showNew, setShowNew] = useState(false);
+  const { user, settings } = useAppStore();
   const navigate = useNavigate();
+  const [apps, setApps] = useState<AppRow[] | null>(null);
+  const [mcps, setMcps] = useState(0);
+  const [prompt, setPrompt] = useState("");
 
-  const load = () => {
-    api.get<{ apps: AppRow[] }>("/api/apps").then((r) => setApps(r.apps)).catch((e) => toast("error", e.message));
-  };
   useEffect(() => {
-    load();
-    loadSettings().catch(() => {});
-    const t = setInterval(load, 8000);
+    api.get<{ apps: AppRow[] }>("/api/apps").then((r) => setApps(r.apps)).catch(() => setApps([]));
+    api.get<{ servers: unknown[] }>("/api/mcp").then((r) => setMcps(r.servers.length)).catch(() => {});
+    const t = setInterval(() => {
+      api.get<{ apps: AppRow[] }>("/api/apps").then((r) => setApps(r.apps)).catch(() => {});
+    }, 8000);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const ready = apps !== null;
-  const modelsReady = !!settings?.defaultModel;
+  const list = apps ?? [];
+  const running = list.filter((a) => a.sandbox.status === "running").length;
+  const firstName = (user?.name ?? "there").split(" ")[0];
 
   return (
-    <div className="min-h-full">
-      {/* Top nav */}
-      <header className="sticky top-0 z-40 border-b border-line bg-surface-0/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <Logo size={26} />
-            <span className="text-sm font-semibold tracking-tight">Dyad Cloud</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/settings" className="btn-secondary btn-sm">
-              <Settings size={13} /> Settings
-            </Link>
-            <button className="btn-ghost !h-7 !px-1.5" title="Sign out" onClick={signOut}>
-              <LogOut size={13} />
-            </button>
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-2xs font-semibold text-accent ring-1 ring-accent/30" title={user?.email}>
-              {(user?.name ?? user?.email ?? "?").slice(0, 1).toUpperCase()}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="flex items-end justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Apps</h1>
-            <p className="hint mt-1">Every app runs in its own cloud sandbox with a live preview.</p>
-          </div>
-          <button className="btn-primary" onClick={() => setShowNew(true)}>
-            <Plus size={15} /> New app
-          </button>
-        </div>
-
-        {!modelsReady && ready && (
-          <div className="mt-5 flex items-start gap-3 rounded-lg border border-warn/25 bg-warn/5 px-4 py-3">
-            <Sparkles size={15} className="mt-0.5 text-warn" />
-            <div className="text-sm">
-              <span className="font-medium text-ink">Finish setup:</span>{" "}
-              <span className="text-ink-mute">
-                connect a model provider and activate a model so the agent can build.{" "}
-              </span>
-              <Link to="/settings" className="text-accent hover:underline">
-                Open Settings → Models
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Grid */}
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {!ready && (
-            <div className="col-span-full flex items-center justify-center py-20 text-ink-faint">
-              <Spinner size={16} className="mr-2" /> Loading apps...
-            </div>
-          )}
-          {ready && apps!.length === 0 && (
-            <button
-              onClick={() => setShowNew(true)}
-              className="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed border-line-strong py-20 text-center transition-colors hover:border-accent/50 hover:bg-accent-soft"
-            >
-              <Boxes size={28} className="text-ink-faint" />
-              <div className="mt-3 text-sm font-medium text-ink">Create your first app</div>
-              <div className="hint mt-1 max-w-xs">
-                The agent scaffolds a React + shadcn/ui project in an E2B sandbox and builds from your description.
-              </div>
-            </button>
-          )}
-          {ready &&
-            apps!.map((a) => (
-              <AppCard key={a.id} app={a} onDelete={async () => {
-                if (!confirm(`Delete "${a.name}"? The sandbox and chat history will be removed.`)) return;
-                try {
-                  await api.del(`/api/apps/${a.id}`);
-                  toast("success", "App deleted");
-                  load();
-                } catch (e: any) {
-                  toast("error", e.message);
-                }
-              }} />
-            ))}
-          {ready && apps!.length > 0 && (
-            <button
-              onClick={() => setShowNew(true)}
-              className="flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed border-line text-ink-faint transition-colors hover:border-accent/50 hover:text-accent"
-            >
-              <Plus size={18} />
-              <span className="mt-1.5 text-xs font-medium">New app</span>
-            </button>
-          )}
-        </div>
-      </main>
-
-      <NewAppDialog open={showNew} onClose={() => setShowNew(false)} onCreated={(id) => navigate(`/apps/${id}`)} />
-    </div>
-  );
-}
-
-function AppCard({ app, onDelete }: { app: AppRow; onDelete: () => void }) {
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="panel group relative flex flex-col p-4 transition-colors hover:border-line-strong">
-      <Link to={`/apps/${app.id}`} className="flex-1">
-        <div className="flex items-start justify-between">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-3 text-lg">{app.emoji}</div>
-          <div className="flex items-center gap-1.5 text-2xs text-ink-faint">
-            <StatusDot status={app.sandbox.status} />
-            {app.sandbox.status}
-          </div>
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <div className="truncate text-sm font-semibold text-ink">{app.name}</div>
-        </div>
-        <p className="hint mt-1 line-clamp-2 min-h-8">{app.description || "No description"}</p>
-      </Link>
-      <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
-        <span className="text-2xs text-ink-faint">
-          {app.sandbox.mode === "e2b" ? "E2B sandbox" : "local runtime"} · updated {timeAgo(app.updatedAt)}
-        </span>
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            title="Restart app"
-            className="btn-ghost !h-6 !px-1.5"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await api.post(`/api/apps/${app.id}/restart`);
-                toast("success", "App restarted");
-              } catch (e: any) {
-                toast("error", e.message);
-              } finally {
-                setBusy(false);
-              }
+    <div className="mx-auto max-w-5xl px-8 py-8">
+      {/* Hero / quick build */}
+      <section className="relative overflow-hidden rounded-xl border border-line bg-surface-2 p-6">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 55% 70% at 12% 0%, rgba(99,102,241,0.13), transparent), radial-gradient(ellipse 40% 55% at 95% 110%, rgba(52,211,153,0.06), transparent)",
+          }}
+        />
+        <div className="relative">
+          <h1 className="text-xl font-semibold tracking-tight">Welcome back, {firstName}</h1>
+          <p className="mt-1 text-sm text-ink-mute">
+            Describe an app and the agent builds it in an isolated cloud sandbox — code, deps, dev server, live preview.
+          </p>
+          <form
+            className="mt-4 flex items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              navigate("/build", { state: { prompt } });
             }}
           >
-            {busy ? <Spinner size={12} /> : <RefreshCw size={12} />}
-          </button>
-          <button title="Delete app" className="btn-ghost !h-6 !px-1.5 hover:!text-err" onClick={onDelete}>
-            <Trash2 size={12} />
-          </button>
+            <input
+              className="input h-11 flex-1 text-sm"
+              placeholder="e.g. A CRM dashboard with pipeline stages and activity feed..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+            <button className="btn-primary !h-11" type="submit">
+              <Sparkles size={14} /> Build
+            </button>
+          </form>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {[
+              "Kanban board with drag-and-drop",
+              "Habit tracker with streak heatmap",
+              "Expense splitter with balances",
+            ].map((s) => (
+              <button
+                key={s}
+                className="rounded-full border border-line bg-surface-1 px-2.5 py-1 text-2xs text-ink-mute transition-colors hover:border-accent/40 hover:text-ink"
+                onClick={() => setPrompt(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Stats */}
+      <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon={<Boxes size={15} />} label="Apps" value={String(list.length)} sub={`${running} running`} to="/apps" />
+        <StatCard icon={<Hammer size={15} />} label="Build an app" value="New" sub="from a prompt" to="/build" />
+        <StatCard icon={<Plug size={15} />} label="MCP servers" value={String(mcps)} sub="connected tools" to="/integrations" />
+        <StatCard icon={<Wrench size={15} />} label="Skills" value="6+" sub="playbooks" to="/integrations" />
+      </section>
+
+      {/* Setup checklist */}
+      {!settings?.defaultModel && (
+        <section className="mt-5 flex items-start gap-3 rounded-lg border border-warn/25 bg-warn/5 px-4 py-3">
+          <Sparkles size={15} className="mt-0.5 shrink-0 text-warn" />
+          <div className="text-sm">
+            <span className="font-medium text-ink">One step left:</span>{" "}
+            <span className="text-ink-mute">confirm your default model so the agent can build. </span>
+            <Link to="/settings" className="text-accent hover:underline">Open Settings →</Link>
+          </div>
+        </section>
+      )}
+
+      {/* Recent apps */}
+      <section className="mt-7">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold tracking-tight">Recent apps</h2>
+          <Link to="/apps" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+            View all <ArrowRight size={12} />
+          </Link>
+        </div>
+        {apps === null ? (
+          <div className="mt-4 flex items-center gap-2 text-sm text-ink-faint">
+            <Spinner size={14} /> Loading...
+          </div>
+        ) : list.length === 0 ? (
+          <button
+            onClick={() => navigate("/build")}
+            className="mt-4 flex w-full flex-col items-center rounded-xl border border-dashed border-line-strong py-12 transition-colors hover:border-accent/50 hover:bg-accent-soft/30"
+          >
+            <Zap size={22} className="text-ink-faint" />
+            <div className="mt-2.5 text-sm font-medium text-ink">Build your first app</div>
+            <div className="hint mt-1 max-w-xs text-center">
+              Start from a one-line prompt. The agent scaffolds, codes, installs and runs it in the sandbox.
+            </div>
+          </button>
+        ) : (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {list.slice(0, 4).map((a) => (
+              <Link
+                key={a.id}
+                to={`/apps/${a.id}`}
+                className="panel group flex items-center gap-3.5 p-4 transition-colors hover:border-line-strong"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-lg">
+                  {a.emoji}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-ink">{a.name}</div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-2xs text-ink-faint">
+                    <StatusDot status={a.sandbox.status} /> {a.sandbox.status} · {timeAgo(a.updatedAt)}
+                  </div>
+                </div>
+                <ArrowRight size={14} className="shrink-0 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
 
-function NewAppDialog({
-  open,
-  onClose,
-  onCreated,
+function StatCard({
+  icon,
+  label,
+  value,
+  sub,
+  to,
 }: {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (id: string) => void;
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub: string;
+  to: string;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [ideaIndex, setIdeaIndex] = useState(0);
-
-  const IDEAS = [
-    "A team retrospective board with sticky notes, voting and an action items list",
-    "A personal finance tracker with budgets, categories and monthly charts",
-    "A recipe manager with search, tags, and a weekly meal planner",
-    "A habit tracker with streaks, heatmap and daily check-ins",
-    "A Kanban board with drag-and-drop columns, labels and due dates",
-  ];
-
-  const create = async () => {
-    if (!name.trim()) return;
-    setBusy(true);
-    try {
-      const { app } = await api.post<{ app: AppRow }>("/api/apps", { name, description });
-      onCreated(app.id);
-    } catch (e: any) {
-      toast("error", e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Create a new app"
-      description="The agent will scaffold a React + TypeScript + shadcn/ui project in a fresh sandbox."
-    >
-      <div className="space-y-4">
-        <div>
-          <label className="label">App name</label>
-          <input
-            className="input"
-            placeholder="Task Tracker"
-            value={name}
-            autoFocus
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && create()}
-          />
-        </div>
-        <div>
-          <div className="flex items-center justify-between">
-            <label className="label">What should it do? (optional)</label>
-            <button
-              className="text-2xs text-accent hover:underline inline-flex items-center gap-1 mb-1.5"
-              onClick={() => {
-                setIdeaIndex((i) => (i + 1) % IDEAS.length);
-                setDescription(IDEAS[ideaIndex]);
-              }}
-            >
-              <Zap size={11} /> Surprise me
-            </button>
-          </div>
-          <textarea
-            className="input h-24 resize-none py-2"
-            placeholder="A habit tracker with streaks, a heatmap and daily check-ins..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <p className="hint mt-1.5">You can also describe it in your first chat message — the agent will take it from there.</p>
-        </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={create} disabled={!name.trim() || busy}>
-            {busy && <Spinner size={14} />} Create app
-          </button>
-        </div>
+    <Link to={to} className="panel group p-4 transition-colors hover:border-line-strong">
+      <div className="flex items-center gap-2 text-ink-faint">
+        <span className="flex h-6.5 w-6.5 items-center justify-center rounded-md bg-surface-3 text-accent" style={{ height: 26, width: 26 }}>
+          {icon}
+        </span>
+        <span className="text-xs font-medium">{label}</span>
       </div>
-    </Dialog>
+      <div className="mt-2.5 flex items-baseline gap-1.5">
+        <span className="text-xl font-semibold tracking-tight text-ink">{value}</span>
+        <span className="text-2xs text-ink-faint">{sub}</span>
+      </div>
+    </Link>
   );
-}
-
-export function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
 }

@@ -1033,8 +1033,14 @@ app.post("/api/e2b/test", requireUser, async (req, res) => {
 // Static client
 // ---------------------------------------------------------------------------
 
-app.use(express.static(DIST_DIR));
-app.get(/^\/(?!api\/).*/, (_req, res) => {
+app.use(express.static(DIST_DIR, {
+  setHeaders: (res, filePath) => {
+    // index.html must never be cached — it references hashed assets.
+    if (filePath.endsWith(".html")) res.setHeader("Cache-Control", "no-cache");
+  },
+}));
+app.get(/^\/(?!api\/|preview\/).*/, (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache");
   res.sendFile(path.join(DIST_DIR, "index.html"));
 });
 

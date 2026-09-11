@@ -1,15 +1,21 @@
 import React, { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { initAuthToken } from "./lib/api";
 import { useAppStore } from "./lib/store";
-import { Toasts, Spinner } from "./components/ui";
+import { Spinner, Toasts } from "./components/ui";
+import Sidebar from "./components/Sidebar";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Build from "./pages/Build";
+import MyApps from "./pages/MyApps";
 import Builder from "./pages/Builder";
+import Integrations from "./pages/Integrations";
 import SettingsPage from "./pages/SettingsPage";
 
 export default function App() {
   const { user, authChecked, checkAuth } = useAppStore();
   useEffect(() => {
+    initAuthToken();
     checkAuth();
   }, [checkAuth]);
 
@@ -21,15 +27,33 @@ export default function App() {
     );
   }
 
+  if (!user) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="*" element={<Login />} />
+        </Routes>
+        <Toasts />
+      </BrowserRouter>
+    );
+  }
+
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-        <Route path="/" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
-        <Route path="/apps/:appId" element={user ? <Builder /> : <Navigate to="/login" replace />} />
-        <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div className="flex h-full">
+        <Sidebar />
+        <main className="min-w-0 flex-1 overflow-y-auto bg-surface-0">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/build" element={<Build />} />
+            <Route path="/apps" element={<MyApps />} />
+            <Route path="/apps/:appId" element={<Builder />} />
+            <Route path="/integrations" element={<Integrations />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
       <Toasts />
     </BrowserRouter>
   );

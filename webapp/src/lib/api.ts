@@ -8,26 +8,68 @@ export class ApiError extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// Auth token — the preview runs inside a cross-site iframe where browsers may
-// refuse to store SameSite cookies, so we keep the session token in
-// localStorage and send it as an Authorization header alongside the cookie.
+// Auth token
+//
+// The app is often embedded in a sandboxed preview iframe (opaque origin):
+// localStorage throws SecurityError and third-party cookies are blocked, so a
+// plain cookie/localStorage session can never stick. We therefore keep the
+// token in the URL hash (#t=...) — which survives reloads even in sandboxed
+// iframes — with localStorage and in-memory as fallbacks.
 // ---------------------------------------------------------------------------
 
 const TOKEN_KEY = "dc_token";
+let currentToken: string | null = null;
+
+function safeStorage(op: "get" | "set" | "del"): string | null | undefined {
+  try {
+    if (op === "get") return localStorage.getItem(TOKEN_KEY);
+    if (op === "set") return localStorage.getItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* storage unavailable (sandboxed iframe) */
+  }
+  return undefined;
+}
+
+/** Restore the token from hash → localStorage. Call once at app boot. */
+export function initAuthToken(): string | null {
+  try {
+    const m = window.location.hash.match(/[#&]t=([^&]+)/);
+    if (m?.[1]) {
+      currentToken = decodeURIComponent(m[1]);
+      try {
+        localStorage.setItem(TOKEN_KEY, currentToken);
+      } catch { /* ignore */ }
+      return currentToken;
+    }
+  } catch { /* ignore */ }
+  const stored = safeStorage("get");
+  if (stored) currentToken = stored;
+  return currentToken;
+}
 
 export function setAuthToken(token: string | null | undefined) {
-  try {
-    if (token) localStorage.setItem(TOKEN_KEY, token);
-    else localStorage.removeItem(TOKEN_KEY);
-  } catch { /* storage unavailable */ }
+  currentToken = token ?? null;
+  if (token) {
+    try {
+      localStorage.setItem(TOKEN_KEY, token);
+    } catch { /* ignore */ }
+    try {
+      const clean = window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", `#t=${encodeURIComponent(token)}`);
+      void clean;
+    } catch { /* ignore */ }
+  } else {
+    safeStorage("del");
+    try {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    } catch { /* ignore */ }
+  }
 }
 
 export function getAuthToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  if (currentToken) return currentToken;
+  return initAuthToken();
 }
 
 function authHeaders(): Record<string, string> {

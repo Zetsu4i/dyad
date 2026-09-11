@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api, streamPost } from "../lib/api";
 import { toast, useAppStore } from "../lib/store";
 import { Dialog, Spinner, StatusDot, Tabs, useClickOutside } from "../components/ui";
-import { timeAgo } from "./Dashboard";
+import { timeAgo } from "../lib/util";
 import {
   ArrowLeft, Bot, Check, ChevronDown, ChevronRight, CircleAlert, CircleCheck, CircleDot,
   Code2, ExternalLink, FileDiff, FilePlus2, FileX2, Hammer, Infinity as Refresh, ListChecks,
@@ -67,6 +67,7 @@ interface ModelRow {
 export default function Builder() {
   const { appId } = useParams<{ appId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { settings } = useAppStore();
 
   const [app, setApp] = useState<AppRow | null>(null);
@@ -136,8 +137,8 @@ export default function Builder() {
   }, []);
 
   // ---- Sending ---------------------------------------------------------------
-  const send = async () => {
-    const content = input.trim();
+  const send = async (override?: string) => {
+    const content = (override ?? input).trim();
     if (!content || streaming) return;
     if (!chat) {
       toast("error", "Chat is not ready yet — try again in a moment");
@@ -147,7 +148,7 @@ export default function Builder() {
       toast("error", "No model selected. Activate one in Settings → Models.");
       return;
     }
-    setInput("");
+    if (!override) setInput("");
     setMessages((m) => [...m, { id: `tmp_${Date.now()}`, role: "user", content, createdAt: new Date().toISOString() }]);
     setStreaming(true);
     setDraft({ content: "", activity: [] });
@@ -223,6 +224,22 @@ export default function Builder() {
     draftRef.current = draft;
   }, [draft]);
 
+  // Auto-send the prompt handed over from the Build page (once, when the chat
+  // is ready).
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  const initialPrompt = (location.state as any)?.initialPrompt as string | undefined;
+  const initialSent = useRef(false);
+  useEffect(() => {
+    if (initialPrompt && chat && !initialSent.current) {
+      initialSent.current = true;
+      navigate(location.pathname, { replace: true, state: {} });
+      const t = setTimeout(() => sendRef.current(initialPrompt), 250);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat, initialPrompt]);
+
   const stop = () => {
     abortRef.current?.abort();
     if (chat) api.post(`/api/chats/${chat.id}/stop`).catch(() => {});
@@ -267,7 +284,7 @@ export default function Builder() {
       {/* ---- Header ---- */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-line bg-surface-1 px-3">
         <div className="flex items-center gap-2 min-w-0">
-          <Link to="/" className="btn-ghost !h-8 !px-2" title="All apps">
+          <Link to="/apps" className="btn-ghost !h-8 !px-2" title="All apps">
             <ArrowLeft size={15} />
           </Link>
           <span className="text-base">{app.emoji}</span>
