@@ -71,6 +71,7 @@ export {
 } from "./version";
 export { languageModelContracts } from "./language-model";
 export { promptContracts } from "./prompts";
+export { skillContracts } from "./skills";
 export { templateContracts } from "./templates";
 export { proposalContracts } from "./proposals";
 export { importContracts } from "./import";
@@ -136,6 +137,7 @@ export { systemClient, systemEventClient } from "./system";
 export { versionClient } from "./version";
 export { languageModelClient } from "./language-model";
 export { promptClient } from "./prompts";
+export { skillClient } from "./skills";
 export { templateClient } from "./templates";
 export { proposalClient } from "./proposals";
 export { importClient } from "./import";
@@ -538,6 +540,7 @@ import { systemClient, systemEventClient } from "./system";
 import { versionClient } from "./version";
 import { languageModelClient } from "./language-model";
 import { promptClient } from "./prompts";
+import { skillClient } from "./skills";
 import { templateClient } from "./templates";
 import { proposalClient } from "./proposals";
 import { importClient } from "./import";
@@ -624,6 +627,7 @@ export const ipc = {
   version: versionClient,
   languageModel: languageModelClient,
   prompt: promptClient,
+  skills: skillClient,
   template: templateClient,
   proposal: proposalClient,
   import: importClient,

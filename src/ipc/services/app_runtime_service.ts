@@ -14,6 +14,7 @@ import { apps } from "@/db/schema";
 import { readSettings } from "@/main/settings";
 import {
   isCloudLikeRuntime,
+  isWebRuntime,
   shouldShowPnpmMinimumReleaseAgeWarning,
   type RuntimeMode2,
 } from "@/lib/schemas";
@@ -292,7 +293,11 @@ export async function executeApp({
   invocationRef?: AppRunInvocationRef;
 }): Promise<void> {
   const settings = readSettings();
-  const runtimeMode = settings.runtimeMode2 ?? "host";
+  // Web (SaaS) runtime is E2B-only: user code always executes in the user's
+  // own E2B sandbox, never on the server host.
+  const runtimeMode: RuntimeMode2 = isWebRuntime()
+    ? "e2b"
+    : (settings.runtimeMode2 ?? "host");
 
   if (runtimeMode === "docker") {
     await executeAppInDocker({
@@ -1670,6 +1675,7 @@ export class AppRuntimeService {
       const appInfo = this.dependencies.getRunningApp(appId);
 
       if (
+        appInfo &&
         isCloudLikeRuntime(appInfo?.mode) &&
         appInfo.cloudSandboxId &&
         !recreateSandbox
@@ -1693,7 +1699,6 @@ export class AppRuntimeService {
       } else {
         logger.log(`App ${appId} not running. Proceeding to start.`);
       }
-
       await this.dependencies.cleanPort(getAppPort(appId));
       if (removeNodeModules) {
         const runtimeMode = this.dependencies.readRuntimeMode();

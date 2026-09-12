@@ -29,6 +29,7 @@ import {
   constructSystemPrompt,
   readAiRules,
 } from "../../prompts/system_prompt";
+import { buildSkillsPromptSection } from "../../prompts/skills_prompt";
 import {
   constructImplementerPrompt,
   resolveImplementerProvider,
@@ -2180,6 +2181,10 @@ ${componentSnippet}
           reinstallAndRestartAppToolAvailable,
           runBuildToolAvailable,
         });
+
+        // Installed skills (real directories synced into the app's sandbox):
+        // describe them so the agent can read SKILL.md and run their scripts.
+        systemPrompt += buildSkillsPromptSection();
 
         // Add information for any legacy caller that still injects full
         // referenced-app codebases.

@@ -31,8 +31,8 @@ function spawnE2bPty(
 ): TerminalPtyProcess {
   const dataCallbacks = new Set<(data: string) => void>();
   const exitCallbacks = new Set<(event: {
-    exitCode: number | null;
-    signal?: number | null;
+    exitCode: number;
+    signal?: number;
   }) => void>();
 
   let activeHandle: {
@@ -61,7 +61,7 @@ function spawnE2bPty(
     }
   };
 
-  const emitExit = (exitCode: number | null): void => {
+  const emitExit = (exitCode: number): void => {
     if (exited) return;
     exited = true;
     for (const cb of exitCallbacks) {
@@ -106,7 +106,9 @@ function spawnE2bPty(
 
       void handle
         .wait()
-        .then((result) => emitExit(result.exitCode ?? 0))
+        .then((result?: { exitCode?: number | null }) =>
+          emitExit(result?.exitCode ?? 0),
+        )
         .catch(() => emitExit(1));
 
       // Flush queued stdin writes.
@@ -146,7 +148,7 @@ function spawnE2bPty(
       return { dispose: () => dataCallbacks.delete(cb) };
     },
     onExit(
-      cb: (event: { exitCode: number | null; signal?: number | null }) => void,
+      cb: (event: { exitCode: number; signal?: number }) => void,
     ): { dispose(): void } {
       exitCallbacks.add(cb);
       return { dispose: () => exitCallbacks.delete(cb) };

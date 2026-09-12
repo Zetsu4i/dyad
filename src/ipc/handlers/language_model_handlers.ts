@@ -23,6 +23,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { IpcMainInvokeEvent } from "electron";
 import { DyadError, DyadErrorKind } from "@/errors/dyad_error";
+import { readSettings } from "@/main/settings";
 
 const logger = log.scope("language_model_handlers");
 const handle = createLoggedHandler(logger);
@@ -518,7 +519,112 @@ export function registerLanguageModelHandlers() {
   handle(
     "get-language-models-by-providers",
     async (): Promise<Record<string, LanguageModel[]>> => {
-      return getLanguageModelsByProviders();
+      const all = await getLanguageModelsByProviders();
+      const settings = readSettings();
+      const activeKeys = settings.activeModelKeys;
+      if (!activeKeys || activeKeys.length === 0) {
+        return all;
+      }
+      // Curated mode: only the admin-activated models appear in the builder.
+      const active = new Set(activeKeys);
+      const filtered: Record<string, LanguageModel[]> = {};
+      for (const [providerId, models] of Object.entries(all)) {
+        const kept = models.filter((m) => active.has(`${providerId}:${m.apiName}`));
+        if (kept.length > 0) {
+          filtered[providerId] = kept;
+        }
+      }
+      return filtered;
+    },
+  );
+
+  handle(
+    "fetch-provider-models-from-api",
+    async (event, params: { providerId: string; baseUrl?: string; apiKey?: string }) => {
+      const { providerId } = params;
+      const settings = readSettings();
+
+      // Resolve base URL: explicit param > custom provider record > builtin map.
+      let baseUrl = params.baseUrl?.trim();
+      let keySource = "request";
+      if (!baseUrl) {
+        const customProvider = db
+          .select()
+          .from(languageModelProvidersSchema)
+          .where(eq(languageModelProvidersSchema.id, providerId))
+          .get();
+        if (customProvider?.api_base_url) {
+          baseUrl = customProvider.api_base_url;
+          keySource = "custom-provider";
+        }
+      }
+      if (!baseUrl) {
+        baseUrl = BUILTIN_PROVIDER_MODEL_LIST_URL[providerId];
+        keySource = "builtin";
+      }
+      if (!baseUrl) {
+        throw new DyadError(
+          `No API base URL known for provider "${providerId}". Add it as a custom provider first.`,
+          DyadErrorKind.NotFound,
+        );
+      }
+
+      // Resolve key: explicit param > stored provider setting.
+      const storedKey = settings.providerSettings?.[providerId]?.apiKey?.value;
+      const apiKey = params.apiKey?.trim() || storedKey?.trim();
+      if (!apiKey) {
+        throw new DyadError(
+          `No API key configured for provider "${providerId}". Add the key first, then sync models.`,
+          DyadErrorKind.Auth,
+        );
+      }
+
+      const url = `${baseUrl.replace(/\/+$/, "")}/models`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          Accept: "application/json",
+        },
+        // Signal an abort so a hung provider doesn't block the settings UI.
+        signal: AbortSignal.timeout(20_000),
+      });
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new DyadError(
+          `Model list request failed (${response.status}): ${body.slice(0, 200)}`,
+          DyadErrorKind.External,
+        );
+      }
+      const json = (await response.json()) as {
+        data?: { id?: string; name?: string }[];
+        models?: { id?: string; name?: string }[];
+      };
+      const raw = json.data ?? json.models ?? [];
+      const models = raw
+        .map((m) => m.id ?? m.name ?? "")
+        .filter((id) => typeof id === "string" && id.length > 0)
+        .sort((a, b) => a.localeCompare(b));
+
+      logger.info(
+        `Fetched ${models.length} models for provider ${providerId} from ${url} (key source: ${keySource})`,
+      );
+      return { models, source: url };
     },
   );
 }
+
+/**
+ * OpenAI-compatible /models endpoints for built-in cloud providers that
+ * expose one. Providers not listed here need an explicit baseUrl.
+ */
+const BUILTIN_PROVIDER_MODEL_LIST_URL: Record<string, string> = {
+  openai: "https://api.openai.com/v1",
+  anthropic: "https://api.anthropic.com/v1",
+  xai: "https://api.x.ai/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+  deepseek: "https://api.deepseek.com/v1",
+  groq: "https://api.groq.com/openai/v1",
+  mistral: "https://api.mistral.ai/v1",
+  together: "https://api.together.xyz/v1",
+  fireworks: "https://api.fireworks.ai/inference/v1",
+};

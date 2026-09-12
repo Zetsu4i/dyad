@@ -25,6 +25,19 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
+/**
+ * Marks this process as the web (SaaS) runtime. Backend code checks this via
+ * isWebRuntime() (src/lib/schemas.ts) to unlock pro-tier agent features and
+ * force E2B-only sandbox execution. Set here — at the top of the module that
+ * replaces `electron` in the server bundle — so it is always defined no
+ * matter which esbuild entry/config produced the bundle.
+ */
+declare global {
+  // eslint-disable-next-line no-var
+  var __DYAD_WEB__: boolean | undefined;
+}
+globalThis.__DYAD_WEB__ = true;
+
 // ---------------------------------------------------------------------------
 // Data directory layout (mirrors Electron's userData layout)
 // ---------------------------------------------------------------------------
@@ -721,7 +734,7 @@ export const WebContentsView = class {
   constructor() {}
   setBounds() {}
   webContents = new WebContentsShim("about:blank");
-} as unknown as import("electron").WebContentsViewConstructor;
+} as unknown as import("electron").WebContentsView;
 
 // preload-only helpers (unused on the server, present for completeness)
 export const contextBridge = {

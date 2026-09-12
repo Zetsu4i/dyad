@@ -565,6 +565,9 @@ const BaseUserSettingsFields = {
   disablePreviewNodeAutoInstall: z.boolean().optional(),
   customAppsFolder: z.string().optional().nullable(),
   e2bApiKey: SecretSchema.optional(),
+  // Model curation: "providerId:modelApiName" keys. When non-empty, only
+  // these models appear as selectable options in the builder chat.
+  activeModelKeys: z.array(z.string()).optional(),
   isRunning: z.boolean().optional(),
   lastKnownPerformance: LastKnownPerformanceSchema.optional(),
   enableContextCompaction: z.boolean().optional(),
@@ -668,7 +671,24 @@ export function migrateStoredSettings(
   };
 }
 
+/**
+ * True when running the web (SaaS) runtime — the Node web server bundle sets
+ * `globalThis.__DYAD_WEB__` via its build banner, and the web renderer build
+ * defines it at build time. In this runtime all pro-tier agent features are
+ * unlocked: users bring their own provider keys, so there is no Dyad Pro
+ * subscription gate.
+ */
+export function isWebRuntime(): boolean {
+  return (
+    typeof globalThis !== "undefined" &&
+    (globalThis as { __DYAD_WEB__?: boolean }).__DYAD_WEB__ === true
+  );
+}
+
 export function isDyadProEnabled(settings: UserSettings): boolean {
+  if (isWebRuntime()) {
+    return true;
+  }
   return settings.enableDyadPro === true && hasDyadProKey(settings);
 }
 

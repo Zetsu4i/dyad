@@ -110,6 +110,19 @@ export const languageModelContracts = {
     output: z.array(LanguageModelProviderSchema),
   }),
 
+  fetchProviderModels: defineContract({
+    channel: "fetch-provider-models-from-api",
+    input: z.object({
+      providerId: z.string(),
+      baseUrl: z.string().optional(),
+      apiKey: z.string().optional(),
+    }),
+    output: z.object({
+      models: z.array(z.string()),
+      source: z.string(),
+    }),
+  }),
+
   getModels: defineContract({
     channel: "get-language-models",
     input: z.object({ providerId: z.string() }),

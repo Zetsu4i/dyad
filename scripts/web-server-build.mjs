@@ -64,6 +64,7 @@ const ctx = await build({
     "cpu-features",
     "@mapbox/node-pre-gyp",
     "sqlite3",
+    "ssh2",
   ],
   sourcemap: true,
   logLevel: "warning",

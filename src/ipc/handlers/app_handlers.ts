@@ -1,4 +1,5 @@
 import { isCloudLikeRuntime } from "@/lib/schemas";
+import { e2bSandboxProvider } from "../utils/e2b_sandbox_provider";
 import { app, dialog } from "electron";
 import { closeDatabase, db, getDatabaseFilePaths } from "../../db";
 import { apps, chats, messages, versions } from "../../db/schema";
@@ -1392,6 +1393,24 @@ export function registerAppHandlers() {
       }
     },
   );
+
+  createTypedHandler(appContracts.getAppOpenPorts, async (_, { appId }) => {
+    const appInfo = runningApps.get(appId);
+    if (!appInfo || !isCloudLikeRuntime(appInfo.mode) || !appInfo.cloudSandboxId) {
+      return { sandboxId: "", previewBase: null, ports: [] };
+    }
+    try {
+      const result = await e2bSandboxProvider.listListeningPorts(appId);
+      return {
+        sandboxId: result.sandboxId,
+        previewBase: e2bSandboxProvider.getPreviewUrlForApp(appId) ?? null,
+        ports: result.ports,
+      };
+    } catch (error) {
+      logger.warn(`Failed to list open ports for app ${appId}:`, error);
+      return { sandboxId: "", previewBase: null, ports: [] };
+    }
+  });
 
   createTypedHandler(appContracts.restartApp, async (_, params) => {
     // Same reasoning as stopApp: the restart tears down the dev server the

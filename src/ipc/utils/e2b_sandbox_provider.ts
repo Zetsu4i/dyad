@@ -25,7 +25,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { Sandbox, type SandboxInstance } from "e2b";
+import { Sandbox } from "e2b";
 import log from "electron-log";
 import { readSettings } from "@/main/settings";
 import { getAppPort } from "../../../shared/ports";
@@ -40,6 +40,8 @@ import type {
 const logger = log.scope("e2b_sandbox_provider");
 
 export const E2B_APP_ROOT = "/app";
+/** Where installed skills live inside every sandbox (agent-readable). */
+export const SKILLS_SANDBOX_ROOT = "/home/user/dyad-skills";
 const SANDBOX_IDLE_TIMEOUT_MS = 15 * 60 * 1000; // auto-pause after 15 min idle
 const DEV_BOOT_TIMEOUT_MS = 150 * 1000;
 const INSTALL_TIMEOUT_MS = 10 * 60 * 1000;
@@ -58,7 +60,7 @@ const MAX_LOG_BUFFER_CHARS = 256 * 1024;
  * non-zero exits, which callers here usually want to inspect, not propagate.
  */
 async function safeRun(
-  sandbox: SandboxInstance,
+  sandbox: Sandbox,
   command: string,
   opts?: {
     cwd?: string;
@@ -208,7 +210,7 @@ interface E2bAppState {
   appPath: string;
   port: number;
   sandboxId: string;
-  sandbox: SandboxInstance;
+  sandbox: Sandbox;
   installCommand?: string | null;
   startCommand?: string | null;
   resumed: boolean;
@@ -637,8 +639,8 @@ export class E2bCloudSandboxProvider implements CloudSandboxProvider {
       onData: (data: Uint8Array) => void;
     },
   ): Promise<{
-    handle: Awaited<ReturnType<SandboxInstance["pty"]["create"]>>;
-    ptyModule: SandboxInstance["pty"];
+    handle: Awaited<ReturnType<Sandbox["pty"]["create"]>>;
+    ptyModule: Sandbox["pty"];
     state: E2bAppState;
   }> {
     const state = this.getLiveStateForApp(appId);
@@ -668,6 +670,124 @@ export class E2bCloudSandboxProvider implements CloudSandboxProvider {
     }
     return undefined;
   }
+
+  /** Stable public preview base URL for the app's primary port. */
+  getPreviewUrlForApp(appId: number): string | undefined {
+    const state = this.getLiveStateForApp(appId);
+    if (!state) return undefined;
+    return previewUrlFor(state.sandboxId, state.port);
+  }
+
+  /** App IDs that currently have a live (running) sandbox. */
+  getLiveAppIds(): number[] {
+    return [...this.byAppId.keys()];
+  }
+
+  /**
+   * Detect ALL ports currently listening inside the app's sandbox so the
+   * preview can display any of them (multi-port preview). Uses `ss` when
+   * available and falls back to parsing /proc/net/tcp.
+   */
+  async listListeningPorts(
+    appId: number,
+  ): Promise<{ sandboxId: string; ports: { port: number; process: string | null }[] }> {
+    const state = this.getLiveStateForApp(appId);
+    if (!state) {
+      return { sandboxId: "", ports: [] };
+    }
+    state.lastActiveAt = Date.now();
+
+    const parseSs = (out: string) => {
+      const ports: { port: number; process: string | null }[] = [];
+      const seen = new Set<number>();
+      for (const line of out.split("\n")) {
+        // LISTEN 0  128  0.0.0.0:3000  0.0.0.0:*  users:(("node",pid=123,fd=44)
+        const m = line.match(/:(\d+)\s/) ?? line.match(/:(\d+)\s*$/);
+        if (!line.includes("LISTEN") || !m) continue;
+        const port = Number(m[1]);
+        if (!Number.isFinite(port) || port <= 0 || port > 65535) continue;
+        if (seen.has(port)) continue;
+        seen.add(port);
+        const pm = line.match(/\(\("([^"]+)"/);
+        ports.push({ port, process: pm ? pm[1] : null });
+      }
+      return ports;
+    };
+
+    const ss = await safeRun(
+      state.sandbox,
+      `ss -tlnpH 2>/dev/null || ss -tlnH 2>/dev/null || true`,
+      { timeoutMs: 15_000 },
+    );
+    let ports = parseSs(ss.stdout);
+    if (ports.length === 0) {
+      // Fallback: parse /proc/net/tcp + /proc/net/tcp6 (hex little-endian port)
+      const proc = await safeRun(
+        state.sandbox,
+        `cat /proc/net/tcp /proc/net/tcp6 2>/dev/null || true`,
+        { timeoutMs: 15_000 },
+      );
+      const seen = new Set<number>();
+      for (const line of proc.stdout.split("\n").slice(1)) {
+        const cols = line.trim().split(/\s+/);
+        const localAddr = cols[1];
+        const st = cols[3];
+        if (!localAddr || st !== "0A") continue; // 0A = LISTEN
+        const portHex = localAddr.split(":")[1];
+        const port = Number.parseInt(portHex ?? "", 16);
+        if (!Number.isFinite(port) || port <= 0 || seen.has(port)) continue;
+        seen.add(port);
+        ports.push({ port, process: null });
+      }
+    }
+
+    // The app's own dev-server port should always be listed first.
+    ports.sort((a, b) => {
+      if (a.port === state.port) return -1;
+      if (b.port === state.port) return 1;
+      return a.port - b.port;
+    });
+    return { sandboxId: state.sandboxId, ports };
+  }
+
+  /**
+   * Copy every enabled skill into the app's sandbox at
+   * /home/user/dyad-skills/<slug>/ so the agent can read the SKILL.md
+   * instructions and execute bundled scripts inside the sandbox.
+   */
+  async syncSkillsIntoSandbox(appId: number): Promise<number> {
+    const state = this.getLiveStateForApp(appId);
+    if (!state) return 0;
+    state.lastActiveAt = Date.now();
+
+    const { getEnabledSkillsForSync } = await import("./skills_store");
+    const skills = await getEnabledSkillsForSync();
+    if (skills.length === 0) return 0;
+
+    let synced = 0;
+    for (const skill of skills) {
+      try {
+        if (skill.files.length === 0) continue;
+        const batch = skill.files.map((f) => ({
+          path: path.posix.join(SKILLS_SANDBOX_ROOT, skill.slug, f.relPath),
+          data: f.content,
+        }));
+        for (let i = 0; i < batch.length; i += 200) {
+          await state.sandbox.files.write(batch.slice(i, i + 200));
+        }
+        synced++;
+        state.logBus.push(
+          `[e2b] Skill "${skill.slug}" installed into sandbox (${skill.files.length} files)\n`,
+        );
+      } catch (error) {
+        state.logBus.push(
+          `[e2b] Failed to sync skill "${skill.slug}": ${(error as Error).message}\n`,
+        );
+      }
+    }
+    return synced;
+  }
+
 
   private async ensureToolchain(state: E2bAppState): Promise<void> {
     if (state.toolchainReady) return;
@@ -772,6 +892,16 @@ export class E2bCloudSandboxProvider implements CloudSandboxProvider {
   private async bootApp(state: E2bAppState): Promise<boolean> {
     await this.ensureToolchain(state);
 
+    // Install every enabled skill into the sandbox so the agent can use
+    // them (SKILL.md instructions + bundled scripts/files).
+    try {
+      await this.syncSkillsIntoSandbox(state.appId);
+    } catch (error) {
+      state.logBus.push(
+        `[e2b] Skill sync failed (non-fatal): ${(error as Error).message}\n`,
+      );
+    }
+
     // Install (fresh sandbox or full restart). A resumed sandbox USUALLY
     // keeps node_modules (pause preserves memory state) — but a sandbox that
     // was resumed before its first install completed has none, so verify.
@@ -815,8 +945,8 @@ export class E2bCloudSandboxProvider implements CloudSandboxProvider {
       `cd ${E2B_APP_ROOT} && ${startCommand}`,
       {
         background: true,
-        onStdout: (data) => state.logBus.push(data),
-        onStderr: (data) => state.logBus.push(data),
+        onStdout: (data: string) => state.logBus.push(data),
+        onStderr: (data: string) => state.logBus.push(data),
       },
     );
 
@@ -841,7 +971,7 @@ export class E2bCloudSandboxProvider implements CloudSandboxProvider {
   }
 
   private buildStartCommand(state: E2bAppState): string {
-    const base = state.startCommand?.trim() || "pnpm run dev";
+    const base = state.startCommand?.trim() || this.detectStartCommand(state);
     if (base.includes("--port") || base.includes("-p ")) {
       return base;
     }
@@ -850,6 +980,36 @@ export class E2bCloudSandboxProvider implements CloudSandboxProvider {
     // parsing); npm needs the `--` separator.
     const separator = /(^|\s)(pnpm|bun|yarn)(\s|$)/.test(base) ? "" : " --";
     return `${base}${separator} --port ${state.port}`;
+  }
+
+  /**
+   * Picks a dev-server start command from the app's package.json when the
+   * caller did not specify one. Handles templates without a "dev" script
+   * (e.g. Expo: `pnpm run start` -> `expo start --port X`).
+   */
+  private detectStartCommand(state: E2bAppState): string {
+    try {
+      const pkgPath = path.join(state.appPath, "package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as {
+        scripts?: Record<string, string>;
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      const scripts = pkg.scripts ?? {};
+      const hasExpo = Boolean(
+        pkg.dependencies?.expo ?? pkg.devDependencies?.expo,
+      );
+      // Expo dev server: `expo start` serves both native (Metro) and web.
+      if (hasExpo && scripts.start) {
+        return "pnpm run start";
+      }
+      if (scripts.dev) return "pnpm run dev";
+      if (scripts.start) return "pnpm run start";
+      if (scripts["dev:server"]) return "pnpm run dev:server";
+    } catch {
+      /* no package.json — fall through to the default */
+    }
+    return "pnpm run dev";
   }
 
   private async killDevServer(state: E2bAppState): Promise<void> {

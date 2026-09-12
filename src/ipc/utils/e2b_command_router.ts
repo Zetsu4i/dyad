@@ -73,8 +73,8 @@ export async function tryRunBufferedProcessInE2b(
     const result = await e2bSandboxProvider.runInSandbox(app.appId, commandLine, {
       cwd: E2B_APP_ROOT,
       timeoutMs: options.timeoutMs ?? 10 * 60_000,
-      onStdout: (data) => options.onStdout?.(data),
-      onStderr: (data) => options.onStderr?.(data),
+      onStdout: (data) => options.onStdout?.(data, null),
+      onStderr: (data) => options.onStderr?.(data, null),
     });
 
     const elapsed = Date.now() - startedAt;

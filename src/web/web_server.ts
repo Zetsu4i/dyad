@@ -263,8 +263,8 @@ async function startHttpServer(): Promise<void> {
         // JSON transports `undefined` as `null`; dyad's void-input contracts
         // validate against z.void() which rejects null. Restore undefined at
         // the top level (nested nulls inside objects stay untouched).
-        const args = (Array.isArray(msg.args) ? msg.args : []).map((a) =>
-          a === null ? undefined : a,
+        const args = (Array.isArray(msg.args) ? msg.args : []).map(
+          (a: unknown) => (a === null ? undefined : a),
         );
         try {
           const result = await (ipcMain as any).dispatchInvoke(
@@ -300,8 +300,8 @@ async function startHttpServer(): Promise<void> {
       }
 
       if (msg.type === "send" && typeof msg.channel === "string") {
-        const sendArgs = (Array.isArray(msg.args) ? msg.args : []).map((a) =>
-          a === null ? undefined : a,
+        const sendArgs = (Array.isArray(msg.args) ? msg.args : []).map(
+          (a: unknown) => (a === null ? undefined : a),
         );
         try {
           (ipcMain as any).dispatchSend(
@@ -322,11 +322,24 @@ async function startHttpServer(): Promise<void> {
     ws.on("close", () => {
       alive = false;
       webContents.destroy();
+      try {
+        const { onClientDisconnected } = require("@/web/sandbox_lifecycle");
+        onClientDisconnected(wss.clients.size);
+      } catch {
+        /* lifecycle hooks are best-effort */
+      }
     });
 
     ws.on("error", () => {
       alive = false;
     });
+
+    try {
+      const { onClientConnected } = require("@/web/sandbox_lifecycle");
+      onClientConnected();
+    } catch {
+      /* lifecycle hooks are best-effort */
+    }
   });
 
   await new Promise<void>((resolve) => server.listen(PORT, () => resolve()));

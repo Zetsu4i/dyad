@@ -25,6 +25,11 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    // Web (SaaS) renderer runtime: unlocks pro-tier agent features in the UI
+    // (see isWebRuntime() in src/lib/schemas.ts).
+    "globalThis.__DYAD_WEB__": "true",
+  },
   // Tailwind v4 is handled by @tailwindcss/vite; the parent project's
   // postcss.config (tailwind v3) must not leak into the renderer build.
   css: {

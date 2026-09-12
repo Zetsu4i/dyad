@@ -30,6 +30,16 @@ export async function createFromTemplate({
     return;
   }
 
+  if (templateId === "node") {
+    const sourceScaffoldPath = path.join(__dirname, "..", "..", "scaffold-node");
+    const repoScaffoldPath = path.join(process.cwd(), "scaffold-node");
+    await copyDirectoryRecursive(
+      fs.existsSync(sourceScaffoldPath) ? sourceScaffoldPath : repoScaffoldPath,
+      fullAppPath,
+    );
+    return;
+  }
+
   const template = await getTemplateOrThrow(templateId);
   if (!template.githubUrl) {
     throw new DyadError(

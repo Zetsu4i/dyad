@@ -1,0 +1,14 @@
+{
+  "name": "general-node-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "General-purpose Node.js app — a blank canvas for anything the agent needs to build.",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

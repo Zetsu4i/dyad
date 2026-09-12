@@ -491,6 +491,21 @@ export const appContracts = {
     output: CloudSandboxStatusSchema.nullable(),
   }),
 
+  getAppOpenPorts: defineContract({
+    channel: "get-app-open-ports",
+    input: AppIdParamsSchema,
+    output: z.object({
+      sandboxId: z.string(),
+      previewBase: z.string().nullable(),
+      ports: z.array(
+        z.object({
+          port: z.number(),
+          process: z.string().nullable(),
+        }),
+      ),
+    }),
+  }),
+
   createCloudSandboxShareLink: defineContract({
     channel: "create-cloud-sandbox-share-link",
     input: CreateCloudSandboxShareLinkParamsSchema,

@@ -63,7 +63,7 @@
     "benchmark:code-explorer:smoke": "node benchmarks/code-explorer/suite.mjs --mode smoke",
     "benchmark:code-explorer:full": "node benchmarks/code-explorer/suite.mjs --mode full",
     "web:build-renderer": "vite build --config vite.web.config.mts",
-    "web:build-server": "esbuild src/web/web_server.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist/web/server.cjs --alias:electron=./src/web/electron_shim.ts --external:better-sqlite3 --external:node-pty --external:dugite --external:@vscode/ripgrep --external:electron-log --external:e2b --external:keytar --external:sharp --external:@mapbox/node-pre-gyp --external:sqlite3 --external:session --sourcemap --log-level=warning",
+    "web:build-server": "node scripts/web-server-build.mjs",
     "web:build": "npm run web:build-server && npm run web:build-renderer",
     "web:start": "node dist/web/server.cjs",
     "web:dev": "node scripts/web-dev.mjs"
