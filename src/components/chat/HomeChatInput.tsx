@@ -34,6 +34,7 @@ import { useTypingPlaceholder } from "@/hooks/useTypingPlaceholder";
 import { AuxiliaryActionsMenu } from "./AuxiliaryActionsMenu";
 import { cn } from "@/lib/utils";
 import { templateIdForAppType } from "@/shared/templates";
+import { isWebRuntime } from "@/lib/schemas";
 import { useLoadApps } from "@/hooks/useLoadApps";
 import { AppSearchDialog } from "../AppSearchDialog";
 import { useVoiceToText } from "@/hooks/useVoiceToText";
@@ -56,7 +57,10 @@ export function HomeChatInput({
   }); // eslint-disable-line @typescript-eslint/no-unused-vars
   useChatModeToggle();
   const { userBudget } = useUserBudgetInfo();
-  const isProEnabled = !!userBudget && !!settings?.enableDyadPro;
+  // Web (SaaS) runtime: pro features are unlocked with BYO keys — no
+  // Dyad Pro subscription/budget check gates voice or other pro UI.
+  const isProEnabled =
+    isWebRuntime() || (!!userBudget && !!settings?.enableDyadPro);
 
   const handleTranscription = useCallback(
     (text: string) => {

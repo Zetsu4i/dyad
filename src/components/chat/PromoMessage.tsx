@@ -8,7 +8,7 @@ import { DyadProTrialDialog } from "@/components/DyadProTrialDialog";
 import { useSettings } from "@/hooks/useSettings";
 import { useUserBudgetInfo } from "@/hooks/useUserBudgetInfo";
 import { ipc, type UserBudgetInfo } from "@/ipc/types";
-import { hasDyadProKey, type UserSettings } from "@/lib/schemas";
+import { hasDyadProKey, isWebRuntime, type UserSettings } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 import { useChatMessageCount } from "@/hooks/useChatMessages";
 import { useChatStreamState } from "@/hooks/useChatStream";
@@ -128,6 +128,7 @@ export function shouldShowPromoMessage({
   messagesLength: number;
 }) {
   const hasProKey = settings ? hasDyadProKey(settings) : false;
+  if (isWebRuntime()) return false; // BYOK SaaS: no upgrade promos
   return (
     promoSeed !== null &&
     !settings?.isTestMode &&
