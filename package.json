@@ -61,7 +61,12 @@
     "benchmark:code-explorer": "node benchmarks/code-explorer/run.mjs",
     "benchmark:code-explorer:suite": "node benchmarks/code-explorer/suite.mjs",
     "benchmark:code-explorer:smoke": "node benchmarks/code-explorer/suite.mjs --mode smoke",
-    "benchmark:code-explorer:full": "node benchmarks/code-explorer/suite.mjs --mode full"
+    "benchmark:code-explorer:full": "node benchmarks/code-explorer/suite.mjs --mode full",
+    "web:build-renderer": "vite build --config vite.web.config.mts",
+    "web:build-server": "esbuild src/web/web_server.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist/web/server.cjs --alias:electron=./src/web/electron_shim.ts --external:better-sqlite3 --external:node-pty --external:dugite --external:@vscode/ripgrep --external:electron-log --external:e2b --external:keytar --external:sharp --external:@mapbox/node-pre-gyp --external:sqlite3 --external:session --sourcemap --log-level=warning",
+    "web:build": "npm run web:build-server && npm run web:build-renderer",
+    "web:start": "node dist/web/server.cjs",
+    "web:dev": "node scripts/web-dev.mjs"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^4.0.46",
@@ -109,6 +114,7 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.41.0",
     "dugite": "^3.0.0",
+    "e2b": "^2.49.1",
     "electron-log": "^5.4.3",
     "electron-playwright-helpers": "^2.1.0",
     "electron-squirrel-startup": "^1.0.1",
@@ -157,8 +163,8 @@
     "update-electron-app": "^3.1.2",
     "use-sync-external-store": "^1.6.0",
     "uuid": "^11.1.0",
+    "ws": "^8.21.3",
     "yaml": "^2.8.1",
-    "ws": "^8.19.0",
     "zod": "^4.3.6"
   },
   "optionalDependencies": {

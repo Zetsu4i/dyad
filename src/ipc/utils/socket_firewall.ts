@@ -1124,6 +1124,19 @@ export async function runCommand(
   args: string[],
   options: CommandExecutionOptions = {},
 ): Promise<CommandExecutionResult> {
+  // E2B web runtime: route app commands (installs, rebuilds) into the
+  // app's sandbox instead of a local pty.
+  {
+    const { tryRunCommandInE2b } = require("./e2b_command_router") as typeof import("./e2b_command_router");
+    const e2bResult = await tryRunCommandInE2b({
+      command,
+      args,
+      cwd: options.cwd,
+      timeoutMs: options.timeoutMs,
+    });
+    if (e2bResult !== null) return e2bResult;
+  }
+
   try {
     const invocation = buildPtyInvocation(command, args);
     const { output } = await runPtyCommand(

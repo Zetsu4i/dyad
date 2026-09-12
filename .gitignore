@@ -122,3 +122,6 @@ storybook-static/
 eval-results/
 benchmark-results/
 benchmarks/code-explorer/repos/
+
+# Dyad web-server runtime data (contains user settings + sqlite db)
+.web-data/

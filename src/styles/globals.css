@@ -142,44 +142,45 @@ body[data-scroll-locked] .app-region-drag {
   --tw-prose-pre-bg: var(--background);
 }
 .dark {
-  --docs-bg: #121212;
+  --docs-bg: #09090b;
 
-  --background-lightest: oklch(0.285 0 0);
-  --background-lighter: oklch(0.185 0 0);
-  --background: oklch(0.145 0 0);
-  --background-darker: oklch(0.125 0 0);
-  --background-darkest: oklch(0.105 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Professional zinc-900 / zinc-stone dark palette (SaaS enterprise look) */
+  --background-lightest: #27272a; /* zinc-800 — raised surfaces, popovers */
+  --background-lighter: #1c1c1f; /* raised panels (editor, cards) */
+  --background: #131316; /* main workspace */
+  --background-darker: #101013; /* content well */
+  --background-darkest: #09090b; /* zinc-950 — app chrome, sidebars */
+  --foreground: #f4f4f5; /* zinc-100 */
+  --card: #16161a;
+  --card-foreground: #f4f4f5;
+  --popover: #1c1c1f;
+  --popover-foreground: #f4f4f5;
+  --primary: #fafafa;
+  --primary-foreground: #18181b; /* zinc-900 */
+  --secondary: #27272a; /* zinc-800 */
+  --secondary-foreground: #f4f4f5;
+  --muted: #202023;
+  --muted-foreground: #9d9da6; /* zinc-400/500 blend (stone warmth) */
+  --accent: #26262b;
+  --accent-foreground: #f4f4f5;
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --border: #26262b; /* subtle zinc border */
+  --input: #27272a;
+  --ring: #52525b; /* zinc-600 */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.35 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar: #0c0c0e; /* near zinc-950 */
+  --sidebar-foreground: #d4d4d8; /* zinc-300 */
+  --sidebar-primary: #fafafa;
+  --sidebar-primary-foreground: #18181b;
+  --sidebar-accent: #1f1f23;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: #1c1c1f;
+  --sidebar-ring: #52525b;
 }
 
 @theme inline {

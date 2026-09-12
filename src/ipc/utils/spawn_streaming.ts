@@ -85,6 +85,20 @@ export async function spawnStreaming({
    */
   timeoutMs?: number;
 }): Promise<SpawnStreamingResult> {
+  // E2B web runtime: route app commands into the app's sandbox.
+  {
+    const { trySpawnStreamingInE2b } = require("./e2b_command_router") as typeof import("./e2b_command_router");
+    const e2bResult = await trySpawnStreamingInE2b({
+      command,
+      args,
+      cwd,
+      signal,
+      onOutput,
+      timeoutMs,
+    });
+    if (e2bResult !== null) return e2bResult;
+  }
+
   return new Promise<SpawnStreamingResult>((resolve, reject) => {
     // An already-cancelled run shouldn't start the process at all — spawning
     // just to immediately tree-kill it can still kick off side effects (e.g. a

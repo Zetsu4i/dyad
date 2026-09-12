@@ -111,6 +111,17 @@ export function configureTrustedRenderer(options: {
 }
 
 export function isTrustedRendererUrl(url: string): boolean {
+  // Web mode: the renderer is served by this server itself, but may be
+  // reached through several origins (localhost, the public preview URL,
+  // X-Forwarded hosts). Trust any http(s) URL — the server is single-user.
+  if (globalThis.__DYAD_WEB__) {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
   try {
     const parsed = new URL(url);
     if (parsed.protocol === "file:") {

@@ -7,6 +7,8 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
+    // Allow proxied preview hosts (e.g. cloud sandbox domains).
+    allowedHosts: true,
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

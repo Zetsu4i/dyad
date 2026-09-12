@@ -69,6 +69,13 @@ function toBuffer(chunk: unknown): Buffer {
 export async function runBufferedProcess(
   options: BufferedProcessOptions,
 ): Promise<BufferedProcessResult> {
+  // E2B web runtime: route app commands into the app's sandbox.
+  {
+    const { tryRunBufferedProcessInE2b } = require("./e2b_command_router") as typeof import("./e2b_command_router");
+    const e2bResult = await tryRunBufferedProcessInE2b(options);
+    if (e2bResult !== null) return e2bResult;
+  }
+
   if (options.signal?.aborted) {
     return {
       code: null,

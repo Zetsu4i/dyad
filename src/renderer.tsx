@@ -1,3 +1,6 @@
+// Web runtime: installs window.electron.ipcRenderer over WebSocket BEFORE the
+// app boots (no-op inside Electron, where the real preload already ran).
+import "./web/renderer_ipc_bridge";
 import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { router } from "./router";

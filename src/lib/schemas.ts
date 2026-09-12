@@ -154,7 +154,15 @@ export type VertexProviderSetting = z.infer<typeof VertexProviderSettingSchema>;
 export const RuntimeModeSchema = z.enum(["web-sandbox", "local-node", "unset"]);
 export type RuntimeMode = z.infer<typeof RuntimeModeSchema>;
 
-export const RuntimeMode2Schema = z.enum(["host", "docker", "cloud"]);
+export const RuntimeMode2Schema = z.enum(["host", "docker", "cloud", "e2b"]);
+
+/**
+ * Helper: cloud-like runtime modes route app execution through a remote
+ * sandbox provider (Dyad Engine "cloud" or E2B "e2b").
+ */
+export function isCloudLikeRuntime(mode: RuntimeMode2 | undefined): boolean {
+  return mode === "cloud" || mode === "e2b";
+}
 export type RuntimeMode2 = z.infer<typeof RuntimeMode2Schema>;
 
 /**
@@ -556,6 +564,7 @@ const BaseUserSettingsFields = {
   nodeRuntimePreference: z.enum(["system", "managed"]).optional(),
   disablePreviewNodeAutoInstall: z.boolean().optional(),
   customAppsFolder: z.string().optional().nullable(),
+  e2bApiKey: SecretSchema.optional(),
   isRunning: z.boolean().optional(),
   lastKnownPerformance: LastKnownPerformanceSchema.optional(),
   enableContextCompaction: z.boolean().optional(),

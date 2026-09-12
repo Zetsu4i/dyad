@@ -1,3 +1,4 @@
+import { isCloudLikeRuntime } from "@/lib/schemas";
 import { app, dialog } from "electron";
 import { closeDatabase, db, getDatabaseFilePaths } from "../../db";
 import { apps, chats, messages, versions } from "../../db/schema";
@@ -505,6 +506,19 @@ async function deleteAppById(
   }
   let deletedRow: typeof apps.$inferSelect | null = null;
   try {
+    // Hard-kill the app's E2B sandbox (web runtime): stopping only pauses it.
+    try {
+      const { getActiveE2bProvider } = await import(
+        "@/ipc/utils/cloud_sandbox_provider"
+      );
+      const e2b = getActiveE2bProvider();
+      if (e2b) {
+        await e2b.killSandboxForApp(appId);
+      }
+    } catch (error) {
+      logger.warn(`Failed to kill E2B sandbox for app ${appId}:`, error);
+    }
+
     // A recording session already admitted before the fence holds this app's
     // resources until it ends. Stop that admitted owner before the exclusive
     // path drains the coordinator; nothing here needs the dev server back.
@@ -1292,7 +1306,7 @@ export function registerAppHandlers() {
       const { appId } = params;
       const appInfo = runningApps.get(appId);
 
-      if (!appInfo || appInfo.mode !== "cloud" || !appInfo.cloudSandboxId) {
+      if (!appInfo || !isCloudLikeRuntime(appInfo.mode) || !appInfo.cloudSandboxId) {
         return null;
       }
       const sandboxId = appInfo.cloudSandboxId;
@@ -1355,7 +1369,7 @@ export function registerAppHandlers() {
       const { appId, expiresInSeconds } = params;
       const appInfo = runningApps.get(appId);
 
-      if (!appInfo || appInfo.mode !== "cloud" || !appInfo.cloudSandboxId) {
+      if (!appInfo || !isCloudLikeRuntime(appInfo.mode) || !appInfo.cloudSandboxId) {
         throw new DyadError(
           `App ${appId} is not running in cloud mode`,
           DyadErrorKind.External,

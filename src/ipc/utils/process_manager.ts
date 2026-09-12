@@ -1,6 +1,7 @@
 import { ChildProcess, spawn } from "node:child_process";
 import treeKill from "tree-kill";
 import log from "electron-log";
+import { isCloudLikeRuntime } from "@/lib/schemas";
 import type { Worker } from "node:worker_threads";
 import type { RuntimeMode2 } from "@/lib/schemas";
 import { appOperationCoordinator } from "../services/app_operation_coordinator";
@@ -198,7 +199,9 @@ export async function stopAppByInfo(
   try {
     stopCloudSandboxFileSync(appId);
 
-    if (appInfo.mode === "cloud") {
+    if (isCloudLikeRuntime(appInfo.mode)) {
+      // cloud (engine) destroys the sandbox; e2b PAUSES it (hibernation —
+      // state preserved, resumed with the same data on the next run).
       if (appInfo.cloudSandboxId) {
         await destroyCloudSandbox(appInfo.cloudSandboxId);
       }

@@ -13,6 +13,7 @@ import { db } from "@/db";
 import { apps } from "@/db/schema";
 import { readSettings } from "@/main/settings";
 import {
+  isCloudLikeRuntime,
   shouldShowPnpmMinimumReleaseAgeWarning,
   type RuntimeMode2,
 } from "@/lib/schemas";
@@ -303,7 +304,7 @@ export async function executeApp({
       startCommand,
       invocationRef,
     });
-  } else if (runtimeMode === "cloud") {
+  } else if (runtimeMode === "cloud" || runtimeMode === "e2b") {
     await executeAppInCloud({
       appPath,
       appId,
@@ -655,7 +656,7 @@ export function registerCloudSandboxSyncUpdateListener(): void {
 
   setCloudSandboxSyncUpdateListener(({ appId, errorMessage }) => {
     const appInfo = runningApps.get(appId);
-    if (!appInfo || appInfo.mode !== "cloud") {
+    if (!appInfo || !isCloudLikeRuntime(appInfo.mode)) {
       return;
     }
 
@@ -1248,11 +1249,12 @@ async function executeAppInCloud({
   }
 
   const cloudLogAbortController = new AbortController();
+  const cloudRuntimeMode = (readSettings().runtimeMode2 ?? "cloud") as RuntimeMode2;
   runningApps.set(appId, {
     process: null,
     processId: currentProcessId,
     invocationRef,
-    mode: "cloud",
+    mode: cloudRuntimeMode,
     output,
     cloudSandboxId: sandboxId,
     cloudPreviewUrl: resolvedPreviewUrl,
@@ -1271,13 +1273,32 @@ async function executeAppInCloud({
   // raced that upload cannot leave the new preview permanently stale.
   queueCloudSandboxSnapshotSync({ appId, fullSync: true, immediate: true });
 
-  await ensureProxyForRunningApp({
-    appId,
-    output,
-    originalUrl: resolvedPreviewUrl,
-    mode: "cloud",
-    invocationRef,
-  });
+  if (cloudRuntimeMode === "e2b") {
+    // E2B preview URLs are already public — no local proxy needed. Set the
+    // proxyUrl bookkeeping so waitForAppReady resolves, and emit the
+    // proxy-ready protocol line (the sandbox dev-server boot re-emits it via
+    // the log stream once it responds, reloading the preview iframe).
+    const appInfo = runningApps.get(appId);
+    if (appInfo) {
+      appInfo.proxyUrl = resolvedPreviewUrl;
+    }
+    emitProxyServerStarted({
+      appId,
+      output,
+      proxyUrl: resolvedPreviewUrl,
+      originalUrl: resolvedPreviewUrl,
+      mode: "cloud",
+      invocationRef,
+    });
+  } else {
+    await ensureProxyForRunningApp({
+      appId,
+      output,
+      originalUrl: resolvedPreviewUrl,
+      mode: "cloud",
+      invocationRef,
+    });
+  }
 
   startCloudSandboxLogStream({
     appId,
@@ -1649,7 +1670,7 @@ export class AppRuntimeService {
       const appInfo = this.dependencies.getRunningApp(appId);
 
       if (
-        appInfo?.mode === "cloud" &&
+        isCloudLikeRuntime(appInfo?.mode) &&
         appInfo.cloudSandboxId &&
         !recreateSandbox
       ) {
@@ -1724,7 +1745,7 @@ export class AppRuntimeService {
         );
         if (process) {
           this.dependencies.removeCurrentProcess(appId, process);
-        } else if (appInfo.mode !== "cloud") {
+        } else if (!isCloudLikeRuntime(appInfo.mode)) {
           this.dependencies.deleteRunningApp(appId);
         }
         throw new DyadError(
@@ -1910,13 +1931,28 @@ export class AppRuntimeService {
     input.appInfo.invocationRef = input.invocationRef;
     input.appInfo.output = input.output;
     input.appInfo.cloudLogAbortController = new AbortController();
-    await this.dependencies.ensureProxy({
-      appId: input.appId,
-      output: input.output,
-      originalUrl: result.previewUrl,
-      mode: "cloud",
-      invocationRef: input.invocationRef,
-    });
+    if (isCloudLikeRuntime(input.appInfo.mode)) {
+      // cloud + e2b: the preview URL is public (engine URL or E2B URL). For
+      // e2b no local proxy exists at all; for cloud the engine URL is used
+      // directly after a restart.
+      input.appInfo.proxyUrl = result.previewUrl;
+      emitProxyServerStarted({
+        appId: input.appId,
+        output: input.output,
+        proxyUrl: result.previewUrl,
+        originalUrl: result.previewUrl,
+        mode: "cloud",
+        invocationRef: input.invocationRef,
+      });
+    } else {
+      await this.dependencies.ensureProxy({
+        appId: input.appId,
+        output: input.output,
+        originalUrl: result.previewUrl,
+        mode: "cloud",
+        invocationRef: input.invocationRef,
+      });
+    }
     this.dependencies.startCloudLogs({
       appId: input.appId,
       appPath: input.appPath,

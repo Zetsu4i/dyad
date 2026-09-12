@@ -613,6 +613,15 @@ let ptySessionManager: PtySessionManager | null = null;
 
 export function getPtySessionManager(): PtySessionManager {
   if (!ptySessionManager) {
+    // In E2B web mode the terminal runs inside the app's E2B sandbox
+    // (real PTY via sandbox.pty); otherwise node-pty runs locally.
+    let spawner: TerminalPtySpawner;
+    try {
+      const { getRuntimePtySpawner } = require("./e2b_pty_spawner") as typeof import("./e2b_pty_spawner");
+      spawner = getRuntimePtySpawner();
+    } catch {
+      spawner = defaultSpawnPty as TerminalPtySpawner;
+    }
     ptySessionManager = new PtySessionManager({
       resolveApp: defaultResolveApp,
       pathExists: (targetPath) => {
@@ -623,7 +632,7 @@ export function getPtySessionManager(): PtySessionManager {
           return false;
         }
       },
-      ptySpawner: defaultSpawnPty as TerminalPtySpawner,
+      ptySpawner: spawner,
       getShellEnv: defaultGetShellEnv,
       send: safeSend,
       now: () => Date.now(),

@@ -826,11 +826,77 @@ class DyadEngineCloudSandboxProvider implements CloudSandboxProvider {
   }
 }
 
-const defaultProvider: CloudSandboxProvider =
-  new DyadEngineCloudSandboxProvider();
+/**
+ * Provider selection: the E2B provider takes over when the web runtime mode
+ * is "e2b" (user's own E2B key, sandboxes managed by this server); otherwise
+ * Dyad's engine-backed cloud provider is used.
+ */
+function getProvider(): CloudSandboxProvider {
+  try {
+    // Lazy import avoided: settings read is cheap and synchronous.
+    const { readSettings } = require("@/main/settings") as typeof import("@/main/settings");
+    if (readSettings().runtimeMode2 === "e2b") {
+      return getE2bProvider();
+    }
+  } catch {
+    /* fall back to the engine provider */
+  }
+  return new DyadEngineCloudSandboxProvider();
+}
+
+function getE2bProvider(): CloudSandboxProvider {
+  // Reuse the exported singleton so every caller shares one instance (and
+  // therefore one set of live sandbox states).
+  const { e2bSandboxProvider } = require("./e2b_sandbox_provider") as typeof import("./e2b_sandbox_provider");
+  return e2bSandboxProvider;
+}
+
+// Keep a module-level handle so the E2B instance is shared across calls.
+const defaultProviderProxy: CloudSandboxProvider = {
+  get name() {
+    return getProvider().name;
+  },
+  createSandbox(input) {
+    return getProvider().createSandbox(input);
+  },
+  destroySandbox(sandboxId) {
+    return getProvider().destroySandbox(sandboxId);
+  },
+  streamLogs(sandboxId, signal) {
+    return getProvider().streamLogs(sandboxId, signal);
+  },
+  uploadFiles(sandboxId, files, options) {
+    return getProvider().uploadFiles(sandboxId, files, options);
+  },
+  restartSandbox(sandboxId) {
+    return getProvider().restartSandbox(sandboxId);
+  },
+  getStatus(sandboxId) {
+    return getProvider().getStatus(sandboxId);
+  },
+  createShareLink(sandboxId, options) {
+    return getProvider().createShareLink(sandboxId, options);
+  },
+};
+
+function getE2bProviderIfActive(): CloudSandboxProvider | null {
+  try {
+    const { readSettings } = require("@/main/settings") as typeof import("@/main/settings");
+    if (readSettings().runtimeMode2 === "e2b") {
+      return getE2bProvider();
+    }
+  } catch {
+    /* not active */
+  }
+  return null;
+}
+
+export function getActiveE2bProvider() {
+  return getE2bProviderIfActive() as import("./e2b_sandbox_provider").E2bCloudSandboxProvider | null;
+}
 
 export async function destroyCloudSandbox(sandboxId: string): Promise<void> {
-  await defaultProvider.destroySandbox(sandboxId);
+  await defaultProviderProxy.destroySandbox(sandboxId);
 }
 
 export async function createCloudSandbox(input: {
@@ -839,7 +905,7 @@ export async function createCloudSandbox(input: {
   installCommand?: string | null;
   startCommand?: string | null;
 }) {
-  return defaultProvider.createSandbox(input);
+  return defaultProviderProxy.createSandbox(input);
 }
 
 export async function uploadCloudSandboxFiles(input: {
@@ -848,34 +914,34 @@ export async function uploadCloudSandboxFiles(input: {
   replaceAll?: boolean;
   deletedFiles?: string[];
 }) {
-  return defaultProvider.uploadFiles(input.sandboxId, input.files, {
+  return defaultProviderProxy.uploadFiles(input.sandboxId, input.files, {
     replaceAll: input.replaceAll,
     deletedFiles: input.deletedFiles,
   });
 }
 
 export async function restartCloudSandbox(sandboxId: string) {
-  return defaultProvider.restartSandbox(sandboxId);
+  return defaultProviderProxy.restartSandbox(sandboxId);
 }
 
 export function streamCloudSandboxLogs(
   sandboxId: string,
   signal?: AbortSignal,
 ) {
-  return defaultProvider.streamLogs(sandboxId, signal);
+  return defaultProviderProxy.streamLogs(sandboxId, signal);
 }
 
 export async function getCloudSandboxStatus(
   sandboxId: string,
 ): Promise<CloudSandboxStatus> {
-  return defaultProvider.getStatus(sandboxId);
+  return defaultProviderProxy.getStatus(sandboxId);
 }
 
 export async function createCloudSandboxShareLink(
   sandboxId: string,
   options?: { expiresInSeconds?: number },
 ): Promise<CloudSandboxShareLink> {
-  return defaultProvider.createShareLink(sandboxId, options);
+  return defaultProviderProxy.createShareLink(sandboxId, options);
 }
 
 export function setCloudSandboxSyncUpdateListener(

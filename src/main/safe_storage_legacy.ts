@@ -1,10 +1,16 @@
 import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import log from "electron-log";
 
 const logger = log.scope("safe_storage_recovery");
-const require = createRequire(import.meta.url);
+const require = createRequire(
+  import.meta.url ||
+    (typeof __filename !== "undefined"
+      ? pathToFileURL(__filename).href
+      : "file://" + process.cwd() + "/"),
+);
 
 /**
  * Recovery for Bug #3837: on macOS, Electron `safeStorage` ciphertext can
