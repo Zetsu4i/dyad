@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -29,6 +30,8 @@ import {
   Trash2,
   CircleDot,
   Loader2,
+  Network,
+  Check,
 } from "lucide-react";
 import { selectedChatIdAtom } from "@/atoms/chatAtoms";
 import { ipc } from "@/ipc/types";
@@ -38,6 +41,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -99,6 +103,7 @@ import {
 import { getPreviewToolbarActionVisibility } from "./previewToolbarLayout";
 import { PREVIEW_TOOLBAR_BUTTON_CLASSES } from "./previewToolbarStyles";
 import { usePreviewIframe } from "@/preview_iframe/usePreviewIframe";
+import { useAppOpenPorts, applyPortOverride, useSelectedPortOverride } from "@/hooks/useAppOpenPorts";
 import {
   selectCanGoBack,
   selectCanGoForward,
@@ -122,6 +127,22 @@ export const PreviewIframe = ({
   const selectedAppId = useAtomValue(selectedAppIdAtom);
   const isPreviewOpen = useAtomValue(isPreviewOpenAtom);
   const { appUrl, originalUrl, mode } = useCurrentAppUrl(selectedAppId);
+  // Multi-port preview: detect every listening port in the sandbox and let
+  // the user pin one via the URL-bar dropdown.
+  const { ports: openPorts, sandboxId: openPortsSandboxId } = useAppOpenPorts(
+    selectedAppId,
+    isPreviewOpen && mode === "cloud",
+  );
+  const { selectedPort, setPort: setPortOverride } = useSelectedPortOverride();
+  const displayAppUrl = useMemo(
+    () =>
+      applyPortOverride(
+        appUrl,
+        openPortsSandboxId,
+        selectedAppId !== null ? selectedPort : null,
+      ),
+    [appUrl, openPortsSandboxId, selectedPort, selectedAppId],
+  );
   const appRunManager = useAppRunRemoteManager();
   const selectedChatId = useAtomValue(selectedChatIdAtom);
   const { streamMessage } = useStreamChat();
@@ -166,7 +187,7 @@ export const PreviewIframe = ({
     onIframeLoaded,
   } = usePreviewIframe({
     appId: selectedAppId,
-    appUrl,
+    appUrl: displayAppUrl,
     iframeRef,
     onSharedMachineEvent: (event) => screenshotAdapterHandlerRef.current(event),
     onComponentMessage: (event) => componentMessageHandlerRef.current(event),
@@ -1420,6 +1441,61 @@ export const PreviewIframe = ({
                 spellCheck={false}
                 value={addressBarValue}
               />
+              {/* Multi-port selector: pick which sandbox port to display. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label="Select sandbox port"
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40",
+                    selectedPort !== null && "text-primary",
+                  )}
+                  data-testid="preview-port-selector"
+                  disabled={loading || !selectedAppId || openPorts.length === 0}
+                  title={
+                    openPorts.length > 0
+                      ? `${openPorts.length} open port(s) detected`
+                      : "Detecting ports..."
+                  }
+                >
+                  <Network size={12} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="text-[11px] text-muted-foreground">
+                    Open ports in sandbox
+                  </DropdownMenuLabel>
+                  {openPorts.length === 0 ? (
+                    <DropdownMenuItem disabled>
+                      Scanning sandbox ports...
+                    </DropdownMenuItem>
+                  ) : (
+                    openPorts.map((p) => (
+                      <DropdownMenuItem
+                        key={p.port}
+                        onClick={() =>
+                          selectedAppId !== null &&
+                          setPortOverride(
+                            selectedAppId,
+                            appUrl && new URL(displayAppUrl ?? appUrl).port ===
+                              String(p.port)
+                              ? null
+                              : p.port,
+                          )
+                        }
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span className="font-mono">:{p.port}</span>
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {p.process ?? "unknown"}
+                          {displayAppUrl &&
+                            new URL(displayAppUrl).port === String(p.port) && (
+                              <Check size={12} className="text-primary" />
+                            )}
+                        </span>
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label="Show detected routes"

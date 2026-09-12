@@ -25,15 +25,17 @@ const PluginsPage: React.FC = () => {
         <header className="mb-8 flex items-start justify-between gap-4">
           <div className="text-left">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Plugins
+              MCP Servers
             </h1>
             <p className="text-md text-gray-600 dark:text-gray-400">
-              Connect plugins (MCP servers) to give the AI new tools.
+              Connect Model Context Protocol servers to give the agent live
+              tools — external APIs, databases and internal workflows. Enabled
+              servers are available to the agent inside every app sandbox.
             </p>
           </div>
           <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus size={16} />
-            Add Plugin
+            Add Server
           </Button>
         </header>
         <PluginsList

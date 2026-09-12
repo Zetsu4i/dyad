@@ -58,3 +58,9 @@ export const screenshotDataUrlAtom = atom<string | null>(null);
 export const pendingVisualChangesAtom = atom<Map<string, VisualEditingChange>>(
   new Map(),
 );
+
+/**
+ * Multi-port preview: the sandbox port the user pinned for this app's
+ * preview (via the URL-bar dropdown). `null` = default app port.
+ */
+export const previewPortOverrideAtom = atom<Record<number, number | null>>({});

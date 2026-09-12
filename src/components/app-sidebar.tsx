@@ -6,6 +6,7 @@ import {
   Store,
   BookOpen,
   Blocks,
+  Sparkles,
 } from "lucide-react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useSidebar } from "@/components/ui/sidebar"; // import useSidebar hook
@@ -53,6 +54,16 @@ const items = [
     icon: Home,
   },
   {
+    title: "Skills",
+    to: "/skills",
+    icon: Sparkles,
+  },
+  {
+    title: "MCP Servers",
+    to: "/plugins",
+    icon: Blocks,
+  },
+  {
     title: "Settings",
     to: "/settings",
     icon: Settings,
@@ -66,11 +77,6 @@ const items = [
     title: "Templates",
     to: "/templates",
     icon: Store,
-  },
-  {
-    title: "Plugins",
-    to: "/plugins",
-    icon: Blocks,
   },
 ] satisfies Array<{
   title: AppSidebarItemTitle;

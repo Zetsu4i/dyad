@@ -43,6 +43,11 @@ import { activeSettingsSectionAtom } from "@/atoms/viewAtoms";
 import { SECTION_IDS, SETTING_IDS } from "@/lib/settingsSearchIndex";
 import { SubagentSettings } from "@/components/settings/SubagentSettings";
 import { RunTypeScriptForWholeProjectSwitch } from "@/components/RunTypeScriptForWholeProjectSwitch";
+import {
+  E2bKeySettings,
+  ModelActivationSettings,
+} from "@/components/settings/SaasSettings";
+import { isWebRuntime } from "@/lib/schemas";
 
 const hint = "text-[13px] leading-relaxed text-muted-foreground";
 
@@ -141,6 +146,22 @@ export default function SettingsPage() {
             description="Connect the AI providers Dyad uses to build and run your apps."
           >
             <ProviderSettingsGrid />
+          </SettingsSection>
+
+          <SettingsSection
+            id="saas-model-activation"
+            title="Active Models"
+            description="Pull the live model list from a provider and choose which models appear in the builder chat."
+          >
+            <ModelActivationSettings />
+          </SettingsSection>
+
+          <SettingsSection
+            id="saas-e2b"
+            title="E2B Sandbox"
+            description="Bring your own E2B key — every app builds and runs in your own cloud sandbox. E2B is the only execution backend in this deployment."
+          >
+            <E2bKeySettings />
           </SettingsSection>
 
           <SettingsSection
@@ -452,9 +473,11 @@ export function GeneralSettings({ appVersion }: { appVersion: string | null }) {
         <ReleaseChannelSelector />
       </div>
 
-      <div id={SETTING_IDS.runtimeMode}>
-        <RuntimeModeSelector />
-      </div>
+      {!isWebRuntime() && (
+        <div id={SETTING_IDS.runtimeMode}>
+          <RuntimeModeSelector />
+        </div>
+      )}
       <div id={SETTING_IDS.nodePath}>
         <NodePathSelector />
       </div>

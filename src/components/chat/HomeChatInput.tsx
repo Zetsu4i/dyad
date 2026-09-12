@@ -7,6 +7,9 @@ import {
   MicOff,
   Loader2,
   Lock,
+  Globe,
+  Smartphone,
+  Boxes,
 } from "lucide-react";
 import {
   Tooltip,
@@ -30,6 +33,7 @@ import { useChatModeToggle } from "@/hooks/useChatModeToggle";
 import { useTypingPlaceholder } from "@/hooks/useTypingPlaceholder";
 import { AuxiliaryActionsMenu } from "./AuxiliaryActionsMenu";
 import { cn } from "@/lib/utils";
+import { templateIdForAppType } from "@/shared/templates";
 import { useLoadApps } from "@/hooks/useLoadApps";
 import { AppSearchDialog } from "../AppSearchDialog";
 import { useVoiceToText } from "@/hooks/useVoiceToText";
@@ -71,6 +75,19 @@ export function HomeChatInput({
   const [appSearchOpen, setAppSearchOpen] = useState(false);
   const { apps, loading: appsLoading } = useLoadApps();
   const canSelectApp = !appsLoading && apps.length > 0;
+  const { updateSettings } = useSettings();
+
+  // App-type switcher: picks the starter template used when the first
+  // prompt creates a new app (web = Vite/React, mobile = Expo, general = Node).
+  const appType =
+    settings?.selectedTemplateId === "expo"
+      ? "mobile"
+      : settings?.selectedTemplateId === "node"
+        ? "general"
+        : "web";
+  const handleAppTypeChange = (next: "web" | "mobile" | "general") => {
+    void updateSettings({ selectedTemplateId: templateIdForAppType(next) });
+  };
 
   const typingText = useTypingPlaceholder([
     "an ecommerce store...",
@@ -332,7 +349,50 @@ export function HomeChatInput({
               )}
             </div>
 
-            <AuxiliaryActionsMenu onFileSelect={handleFileSelect} />
+            <div className="flex items-center gap-2">
+              {/* App type: chooses the sandbox starter template */}
+              {!selectedApp && (
+                <div
+                  className="flex items-center rounded-lg border border-border/70 bg-background-darker p-0.5"
+                  data-testid="app-type-switcher"
+                  role="group"
+                  aria-label="App type"
+                >
+                  {(
+                    [
+                      { key: "web", icon: Globe, label: "Web" },
+                      { key: "mobile", icon: Smartphone, label: "Mobile" },
+                      { key: "general", icon: Boxes, label: "General" },
+                    ] as const
+                  ).map(({ key, icon: Icon, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleAppTypeChange(key)}
+                      disabled={disabled}
+                      aria-pressed={appType === key}
+                      title={`${label} — starts from the ${
+                        key === "web"
+                          ? "React + Vite"
+                          : key === "mobile"
+                            ? "Expo (React Native)"
+                            : "general Node.js"
+                      } template`}
+                      className={cn(
+                        "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors",
+                        appType === key
+                          ? "bg-primary/15 text-primary"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <Icon size={12} />
+                      <span className="hidden sm:inline">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <AuxiliaryActionsMenu onFileSelect={handleFileSelect} />
+            </div>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import {
   PanelResizeHandle,
   type ImperativePanelHandle,
 } from "react-resizable-panels";
+import { Eye, MessageSquare } from "lucide-react";
 import { ChatPanel } from "../components/ChatPanel";
 import { PreviewPanel } from "../components/preview_panel/PreviewPanel";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -15,6 +16,8 @@ import { useChats } from "@/hooks/useChats";
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
 import { selectedChatIdAtom } from "@/atoms/chatAtoms";
 import { ipc } from "@/ipc/types";
+import { useChatStreamManager } from "@/chat_stream/ChatStreamProvider";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DEFAULT_CHAT_PANEL_SIZE = 50;
 
@@ -139,6 +142,86 @@ export default function ChatPage() {
       chatPanelRef.current.resize(previousSizeRef.current);
     }
   }, [isChatPanelHidden]);
+
+  // ---------------------------------------------------------------------------
+  // Sandbox lifecycle: hibernate the app's sandbox when the user leaves the
+  // app builder. The web server pauses (not kills) E2B sandboxes, so the next
+  // visit resumes with the same data in seconds.
+  // ---------------------------------------------------------------------------
+  const chatStreamManager = useChatStreamManager();
+  const isMobile = useIsMobile();
+  const [mobileShowPreview, setMobileShowPreview] = useState(false);
+  const chatsRef = useRef(chats);
+  chatsRef.current = chats;
+
+  useEffect(() => {
+    const appIdAtEffectStart = selectedAppId;
+    return () => {
+      if (appIdAtEffectStart == null) return;
+      // Stay alive while the user is still inside the app's own surfaces
+      // (chat view or the app details page for this app).
+      const path = window.location.pathname;
+      if (path.startsWith("/chat")) return;
+      if (path.startsWith("/app-details")) return;
+      // Never hibernate mid-build: agent tools need the live sandbox.
+      const busy = chatsRef.current.some((c) =>
+        chatStreamManager.getIsStreaming(c.id),
+      );
+      if (busy) return;
+      void ipc.app.stopApp({ appId: appIdAtEffectStart }).catch(() => {
+        /* already stopped or stopping */
+      });
+    };
+  }, [selectedAppId, chatStreamManager]);
+
+  // ---------------------------------------------------------------------------
+  // Mobile: single-pane layout (chat OR preview) with a floating switcher.
+  // ---------------------------------------------------------------------------
+  if (isMobile) {
+    return (
+      <div className="relative h-[calc(100dvh-2.25rem)] w-full overflow-hidden">
+        <div className="absolute inset-0">
+          {!isChatPanelHidden && (
+            <ChatPanel
+              chatId={chatId}
+              isPreviewOpen={isPreviewOpen}
+              onTogglePreview={() => {
+                setIsPreviewOpen(!isPreviewOpen);
+              }}
+            />
+          )}
+        </div>
+        {mobileShowPreview && (
+          <div className="absolute inset-0 z-10 bg-background">
+            <PreviewPanel />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setMobileShowPreview((v) => !v)}
+          aria-label={mobileShowPreview ? "Show chat" : "Show preview"}
+          className={cn(
+            "absolute bottom-4 right-4 z-20 flex items-center gap-1.5 rounded-full border border-border/70 bg-popover px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur transition-colors",
+            mobileShowPreview
+              ? "text-foreground hover:bg-accent"
+              : "text-popover-foreground hover:bg-accent",
+          )}
+        >
+          {mobileShowPreview ? (
+            <>
+              <MessageSquare className="size-3.5" />
+              Chat
+            </>
+          ) : (
+            <>
+              <Eye className="size-3.5" />
+              Preview
+            </>
+          )}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <PanelGroup autoSaveId="persistence" direction="horizontal">

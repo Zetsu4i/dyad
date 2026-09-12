@@ -15,6 +15,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ipc } from "@/ipc/types";
 import { useSystemPlatform } from "@/hooks/useSystemPlatform";
 import { useUserBudgetInfo } from "@/hooks/useUserBudgetInfo";
+import { isWebRuntime } from "@/lib/schemas";
 import type { UserBudgetInfo } from "@/ipc/types";
 import {
   Tooltip,
@@ -42,7 +43,10 @@ export const TitleBar = () => {
   const queryClient = useQueryClient();
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const platform = useSystemPlatform();
-  const showWindowControls = platform !== null && platform !== "darwin";
+  // Web (SaaS) runtime: the browser owns window management — hide the
+  // desktop minimize/maximize/close controls entirely.
+  const showWindowControls =
+    !isWebRuntime() && platform !== null && platform !== "darwin";
 
   const { lastDeepLink, clearLastDeepLink } = useDeepLink();
   useEffect(() => {
