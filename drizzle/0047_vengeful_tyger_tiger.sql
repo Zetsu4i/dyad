@@ -1,1 +1,0 @@
-ALTER TABLE `chat_queue_states` ADD `pause_reason` text;

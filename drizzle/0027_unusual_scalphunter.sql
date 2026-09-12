@@ -1,1 +1,0 @@
-ALTER TABLE `apps` ADD `neon_active_branch_id` text;

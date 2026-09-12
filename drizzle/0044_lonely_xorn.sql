@@ -1,1 +1,0 @@
-ALTER TABLE `chats` ADD `model_selection` text;

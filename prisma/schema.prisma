@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  providerConfigs ProviderConfig[]
+  models       ModelConfig[]
+  settings     UserSettings?
+  apps         App[]
+  skills       Skill[]
+  mcpServers   McpServer[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model UserSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  e2bApiKey String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProviderConfig {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  format    String   // "openai" | "anthropic"
+  baseUrl   String
+  apiKey    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  models    ModelConfig[]
+}
+
+model ModelConfig {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerId  String
+  provider    ProviderConfig @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  modelId     String   // e.g. "openai/gpt-4.1" or "gpt-4.1"
+  displayName String
+  isActive    Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, modelId])
+}
+
+model App {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  templateId    String   @default("react-vite")
+  sandboxId     String?
+  snapshotId    String?
+  sandboxStatus String   @default("none") // none | running | paused | starting | error
+  previewPort   Int      @default(5173)
+  lastActiveAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  chats         Chat[]
+  appSkills     AppSkill[]
+  appMcps       AppMcp[]
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  appId     String
+  app       App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  title     String    @default("New chat")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  chatId     String
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role       String   // user | assistant
+  content    String
+  thinking   String?  // reasoning text (JSON array of segments)
+  toolTrace  String?  // JSON array of tool calls/results
+  modelId    String?
+  createdAt  DateTime @default(now())
+}
+
+model Skill {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug        String
+  name        String
+  description String?
+  source      String   @default("catalog") // catalog | github | custom
+  sourceUrl   String?
+  filesJson   String   // JSON: [{ path, content }]
+  enabled     Boolean  @default(true)
+  installedAt DateTime @default(now())
+  appSkills   AppSkill[]
+
+  @@unique([userId, slug])
+}
+
+model AppSkill {
+  appId    String
+  app      App    @relation(fields: [appId], references: [id], onDelete: Cascade)
+  skillId  String
+  skill    Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  enabled  Boolean @default(true)
+
+  @@id([appId, skillId])
+}
+
+model McpServer {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  command    String   // e.g. "npx"
+  args       String   @default("[]") // JSON string[]
+  env        String   @default("{}") // JSON record
+  enabled    Boolean  @default(true)
+  status     String   @default("disconnected") // disconnected | connected | error
+  statusMessage String?
+  toolsJson  String?  // cached tool descriptors JSON
+  port       Int      @default(8100)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  appMcps    AppMcp[]
+
+  @@unique([userId, name])
+}
+
+model AppMcp {
+  appId        String
+  app          App        @relation(fields: [appId], references: [id], onDelete: Cascade)
+  mcpServerId  String
+  mcpServer    McpServer  @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  enabled      Boolean    @default(true)
+
+  @@id([appId, mcpServerId])
+}

@@ -1,12 +1,37 @@
-Dyad
-Copyright (c) Dyad contributors.
+Forge
+Copyright (c) 2026 Forge contributors.
 
-This product bundles dependencies that carry separate attribution requirements.
+This product is a web-based rebuild of the Dyad app-builder concept
+(https://github.com/dyad-sh/dyad, Apache-2.0):
 
-mustardscript
+- The agent system prompt structure and guidance blocks (role, tool-calling
+  rules, file-editing tool selection with the search/replace fallback rule,
+  app lifecycle guidance, development workflow) are ported from Dyad's
+  src/prompts/local_agent_prompt.ts and adapted to a cloud-sandbox runtime.
+- The core agent tool set and semantics (write_file, search_replace,
+  read_file, list_files, grep, run_command, restart_app,
+  reinstall_and_restart_app, add_dependency, read_logs, set chat title)
+  follow Dyad's local agent tool design.
+
+Upstream Dyad:
+  Copyright (c) Dyad contributors.
+  Licensed under the Apache License, Version 2.0.
+
+This product bundles dependencies that carry separate attribution
+requirements (see package.json for the full list), notably:
+
+ai / @ai-sdk/openai / @ai-sdk/anthropic
 License: Apache-2.0
-Repository: https://github.com/mustardscript/mustardscript
+Repository: https://github.com/vercel/ai
 
-Playwright
+e2b
 License: Apache-2.0
-Repository: https://github.com/microsoft/playwright
+Repository: https://github.com/e2b-dev/E2B
+
+@modelcontextprotocol/sdk
+License: MIT
+Repository: https://github.com/modelcontextprotocol/typescript-sdk
+
+supergateway
+License: MIT
+Repository: https://github.com/nicholasgriffintn/supergateway
