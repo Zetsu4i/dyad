@@ -294,7 +294,7 @@ describe("useFixPreCommitWithAI", () => {
     expect(result.current.unavailableReason).toBe("tool-permission");
   });
 
-  it("names an exhausted quota as the reason so the dialog can say so", () => {
+  it("stays available regardless of the legacy free-agent quota (Pro gating removed)", () => {
     mocks.settings.current = { enableDyadPro: false, agentToolConsents: {} };
     mocks.quota.current = {
       isQuotaExceeded: true,
@@ -306,11 +306,13 @@ describe("useFixPreCommitWithAI", () => {
       wrapper: Wrapper,
     });
 
-    expect(result.current.isAvailable).toBe(false);
-    expect(result.current.unavailableReason).toBe("quota-exhausted");
+    // Pro features are unlocked in this fork: quota state no longer gates
+    // availability, only the tool consent can.
+    expect(result.current.isAvailable).toBe(true);
+    expect(result.current.unavailableReason).toBeNull();
   });
 
-  it("reports no reason while availability is still loading", () => {
+  it("finishes loading immediately for non-Pro users (quota no longer polled)", () => {
     mocks.settings.current = { enableDyadPro: false, agentToolConsents: {} };
     mocks.quota.current = {
       isQuotaExceeded: false,
@@ -322,7 +324,7 @@ describe("useFixPreCommitWithAI", () => {
       wrapper: Wrapper,
     });
 
-    expect(result.current.isAvailabilityLoading).toBe(true);
+    expect(result.current.isAvailabilityLoading).toBe(false);
     expect(result.current.unavailableReason).toBeNull();
   });
 });

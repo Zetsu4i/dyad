@@ -653,8 +653,7 @@ ${ROLE_BLOCK}
 
 ${APP_COMMANDS_BLOCK}
 
-${runCommandToolAvailable ? `${E2B_RUN_COMMAND_BLOCK}\n` : ""}
-${appLifecycleBlock({ restartAppToolAvailable, reinstallAndRestartAppToolAvailable })}
+${runCommandToolAvailable ? `\n${E2B_RUN_COMMAND_BLOCK}\n` : ""}${appLifecycleBlock({ restartAppToolAvailable, reinstallAndRestartAppToolAvailable })}
 
 ${GENERAL_GUIDELINES_BLOCK}
 
@@ -697,8 +696,7 @@ ${ROLE_BLOCK}
 
 ${APP_COMMANDS_BLOCK}
 
-${runCommandToolAvailable ? `${E2B_RUN_COMMAND_BLOCK}\n` : ""}
-${appLifecycleBlock({ restartAppToolAvailable, reinstallAndRestartAppToolAvailable })}
+${runCommandToolAvailable ? `\n${E2B_RUN_COMMAND_BLOCK}\n` : ""}${appLifecycleBlock({ restartAppToolAvailable, reinstallAndRestartAppToolAvailable })}
 
 ${GENERAL_GUIDELINES_BLOCK}
 
