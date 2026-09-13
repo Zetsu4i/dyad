@@ -170,9 +170,11 @@ function resolveE2bCommands(input: {
   if (input.startCommand?.trim()) {
     startCommand = `cd ${E2B_APP_DIR} && PORT=${port} HOST=0.0.0.0 ${input.startCommand.trim()}`;
   } else if (devScript.includes("vite")) {
-    startCommand = `cd ${E2B_APP_DIR} && pnpm run dev -- --host 0.0.0.0 --port ${port} --strictPort`;
+    // pnpm exec passes flags straight to the binary — unlike `pnpm run dev --`,
+    // which forwards the literal `--` and makes vite ignore host/port flags.
+    startCommand = `cd ${E2B_APP_DIR} && pnpm exec vite --host 0.0.0.0 --port ${port} --strictPort`;
   } else if (devScript.includes("next")) {
-    startCommand = `cd ${E2B_APP_DIR} && pnpm run dev -- -H 0.0.0.0 -p ${port}`;
+    startCommand = `cd ${E2B_APP_DIR} && pnpm exec next dev -H 0.0.0.0 -p ${port}`;
   } else if (devScript.includes("expo")) {
     startCommand = `cd ${E2B_APP_DIR} && EXPO_NO_TELEMETRY=1 pnpm exec expo start --web --port ${port}`;
   } else if (devScript) {
@@ -266,6 +268,14 @@ function touchE2bSandbox(context: E2bSandboxContext): void {
   void context.sandbox
     .setTimeout(timeoutMinutes * 60 * 1000)
     .catch(() => undefined);
+}
+
+/**
+ * getHost() returns a bare hostname ("3000-<id>.e2b.app"); the runtime
+ * requires an absolute URL for the preview proxy.
+ */
+function toPublicPreviewUrl(sandbox: Sandbox, port: number): string {
+  return `https://${sandbox.getHost(port)}`;
 }
 
 function toWriteData(bytes: Uint8Array): Blob {
@@ -403,7 +413,7 @@ class E2bCloudSandboxProvider implements CloudSandboxProvider {
 
     return {
       sandboxId: context.sandboxId,
-      previewUrl: sandbox.getHost(E2B_DEV_PORT),
+      previewUrl: toPublicPreviewUrl(sandbox, E2B_DEV_PORT),
       // E2B public preview URLs need no bearer token; a non-empty placeholder
       // satisfies the cloud-sandbox contract. The proxy only attaches
       // Authorization for the engine ("cloud") runtime mode.
@@ -563,7 +573,7 @@ class E2bCloudSandboxProvider implements CloudSandboxProvider {
     context.devHandle = null;
     await startDevServer(context);
     return {
-      previewUrl: context.sandbox.getHost(E2B_DEV_PORT),
+      previewUrl: toPublicPreviewUrl(context.sandbox, E2B_DEV_PORT),
       previewAuthToken: "e2b-public-preview",
     };
   }
@@ -596,7 +606,7 @@ class E2bCloudSandboxProvider implements CloudSandboxProvider {
       sandboxId,
       status: !found ? "stopped" : running ? "running" : "paused",
       previewUrl: context
-        ? context.sandbox.getHost(E2B_DEV_PORT)
+        ? toPublicPreviewUrl(context.sandbox, E2B_DEV_PORT)
         : `https://${E2B_DEV_PORT}-${sandboxId}.e2b.app`,
       previewAuthToken: "e2b-public-preview",
       previewPort: E2B_DEV_PORT,

@@ -7,6 +7,9 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
+    // Remote sandbox previews (e.g. E2B public URLs) arrive with a foreign
+    // Host header; allow any host so sandbox previews work out of the box.
+    allowedHosts: true,
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

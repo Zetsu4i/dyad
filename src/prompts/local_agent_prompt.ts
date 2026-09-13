@@ -51,6 +51,7 @@ How it relates to the other tools:
 - Files created inside the sandbox by commands do NOT sync back to the project. If a generated file must become part of the project, create it with write_file instead.
 - For installing npm dependencies prefer \`add_dependency\`; it updates package.json and installs inside the sandbox.
 - Do not start long-lived dev servers with \`run_command\`; the preview's dev server is managed for you.
+- Vite apps served through the sandbox preview need \`server.allowedHosts: true\` in their vite config so Vite accepts the sandbox's public Host header. The bundled template already sets this; keep it when creating or replacing vite configs.
 </remote_sandbox_execution>`;
 const APP_COMMANDS_BLOCK = `<app_commands>
 Do *not* tell the user to run shell commands. To refresh the app preview page without restarting its development server, suggest the Refresh command:

@@ -588,12 +588,14 @@ export function registerLanguageModelHandlers() {
       }
 
       const parsed = (await response.json()) as {
-        data?: Array<{ id?: string; name?: string }>;
-        models?: Array<{ id?: string; name?: string }>;
+        data?: Array<{ id?: string; name?: string; display_name?: string }>;
+        models?: Array<{ id?: string; name?: string; display_name?: string }>;
       };
       const rawModels = parsed.data ?? parsed.models ?? [];
-      const describe = (entry: { id?: string; name?: string }): string =>
+      const identify = (entry: { id?: string; name?: string }): string =>
         (entry.id ?? entry.name ?? "").trim();
+      const describe = (entry: { id?: string; name?: string; display_name?: string }): string =>
+        (entry.display_name ?? entry.id ?? entry.name ?? "").trim();
       const existing = db
         .select({ apiName: languageModelsSchema.apiName })
         .from(languageModelsSchema)
@@ -603,7 +605,7 @@ export function registerLanguageModelHandlers() {
 
       const models = rawModels
         .map((entry) => ({
-          apiName: describe(entry),
+          apiName: identify(entry),
           displayName: describe(entry),
         }))
         .filter((model) => model.apiName.length > 0)
