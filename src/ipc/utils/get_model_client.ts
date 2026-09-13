@@ -774,7 +774,22 @@ function getRegularModelClient(
             `Custom provider ${model.provider} is missing the API Base URL.`,
           );
         }
-        // Assume custom providers are OpenAI compatible for now
+        if (providerConfig.apiType === "anthropic") {
+          // Anthropic-compatible custom provider (/v1/messages protocol)
+          const provider = createAnthropic({
+            baseURL: providerConfig.apiBaseUrl,
+            apiKey,
+            ...getModelClientFetchOption(),
+          });
+          return {
+            modelClient: {
+              model: provider(model.name),
+              builtinProviderId: providerConfig.id,
+            },
+            backupModelClients: [],
+          };
+        }
+        // Default: OpenAI-compatible custom providers
         const provider = createOpenAICompatible({
           name: providerConfig.id,
           baseURL: providerConfig.apiBaseUrl,

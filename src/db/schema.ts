@@ -659,6 +659,9 @@ export const language_model_providers = sqliteTable(
     name: text("name").notNull(),
     api_base_url: text("api_base_url").notNull(),
     env_var_name: text("env_var_name"),
+    // "openai" (OpenAI-compatible /v1/chat/completions) or "anthropic"
+    // (Anthropic-compatible /v1/messages). Defaults to openai-compatible.
+    api_type: text("api_type").notNull().default("openai"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -682,6 +685,9 @@ export const language_models = sqliteTable("language_models", {
   description: text("description"),
   max_output_tokens: integer("max_output_tokens"),
   context_window: integer("context_window"),
+  // Discovered/imported models can be toggled off so they stay out of the
+  // builder's model picker without deleting them.
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { ToolDefinition, AgentContext, escapeXmlAttr } from "./types";
+import {
+  hasRunningE2bSandboxForApp,
+  isE2bRuntimeModeActive,
+  runE2bCommandForApp,
+} from "@/ipc/utils/e2b_sandbox_provider";
+import { syncCloudSandboxDirtyPaths } from "@/ipc/utils/cloud_sandbox_provider";
 import { db } from "../../../../../../db";
 import { messages } from "../../../../../../db/schema";
 import {
@@ -88,6 +94,27 @@ export const addDependencyTool: ToolDefinition<
         );
       }
       throw error;
+    }
+
+    // E2B runtime mode: the preview's dev server runs inside the remote
+    // sandbox, so mirror the dependency change there (local install already
+    // updated package.json; sync it, then install in the sandbox).
+    if (isE2bRuntimeModeActive() && hasRunningE2bSandboxForApp(ctx.appId)) {
+      await syncCloudSandboxDirtyPaths({ appId: ctx.appId });
+      const installResult = await runE2bCommandForApp(
+        ctx.appId,
+        `pnpm add ${args.packages.join(" ")}`,
+        10 * 60 * 1000,
+      ).catch((error: unknown) => ({
+        stdout: "",
+        stderr: error instanceof Error ? error.message : String(error),
+        exitCode: 1,
+      }));
+      if (installResult.exitCode !== 0) {
+        ctx.onWarningMessage?.(
+          `Dependencies were installed locally, but installing them inside the E2B sandbox failed: ${installResult.stderr.slice(-400)}`,
+        );
+      }
     }
 
     return `Successfully installed or updated ${args.packages.join(", ")}`;

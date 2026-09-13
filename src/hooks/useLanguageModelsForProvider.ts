@@ -22,7 +22,8 @@ export function useLanguageModelsForProvider(providerId: string | undefined) {
         // Return an empty array as it's a query, not an error state
         return [];
       }
-      return ipc.languageModel.getModels({ providerId });
+      // Settings needs disabled models listed so they can be re-enabled.
+      return ipc.languageModel.getModels({ providerId, includeDisabled: true });
     },
     enabled: !!providerId,
   });

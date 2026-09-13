@@ -14,6 +14,8 @@ export const LanguageModelProviderSchema = z.object({
   secondary: z.boolean().optional(),
   envVarName: z.string().optional(),
   apiBaseUrl: z.string().optional(),
+  /** Wire protocol for custom providers: OpenAI-compatible or Anthropic-compatible. */
+  apiType: z.enum(["openai", "anthropic"]).optional(),
   type: z.enum(["custom", "local", "cloud"]),
   isCustom: z.boolean().optional(),
 });
@@ -51,6 +53,8 @@ export const LanguageModelSchema = z.object({
   dollarSigns: z.number().optional(),
   effortSettings: EffortSettingsSchema.optional(),
   type: z.enum(["custom", "local", "cloud"]).optional(),
+  /** Discovered models can be toggled off to hide them from pickers. */
+  enabled: z.boolean().optional(),
 });
 
 export type LanguageModel = z.infer<typeof LanguageModelSchema>;
@@ -68,6 +72,7 @@ export const CreateCustomLanguageModelProviderParamsSchema = z.object({
   name: z.string(),
   apiBaseUrl: z.string(),
   envVarName: z.string().optional(),
+  apiType: z.enum(["openai", "anthropic"]).optional(),
 });
 
 export type CreateCustomLanguageModelProviderParams = z.infer<
@@ -81,6 +86,7 @@ export const CreateCustomLanguageModelParamsSchema = z.object({
   description: z.string().optional(),
   maxOutputTokens: z.number().optional(),
   contextWindow: z.number().optional(),
+  enabled: z.boolean().optional(),
 });
 
 export type CreateCustomLanguageModelParams = z.infer<
@@ -112,7 +118,11 @@ export const languageModelContracts = {
 
   getModels: defineContract({
     channel: "get-language-models",
-    input: z.object({ providerId: z.string() }),
+    input: z.object({
+      providerId: z.string(),
+      /** Settings pages pass true so disabled models can be re-enabled. */
+      includeDisabled: z.boolean().optional(),
+    }),
     output: z.array(LanguageModelSchema),
   }),
 
@@ -174,6 +184,53 @@ export const languageModelContracts = {
     channel: "local-models:list-lmstudio",
     input: z.void(),
     output: z.object({ models: z.array(LocalModelSchema) }),
+  }),
+
+  // ==========================================================================
+  // Model discovery for custom (BYO) providers: fetch the provider's
+  // /models endpoint, bulk-import selected models, and toggle visibility.
+  // ==========================================================================
+  fetchProviderModels: defineContract({
+    channel: "custom-providers:fetch-models",
+    input: z.object({ providerId: z.string() }),
+    output: z.object({
+      models: z
+        .array(
+          z.object({
+            apiName: z.string(),
+            displayName: z.string(),
+            alreadyImported: z.boolean(),
+          }),
+        )
+        .max(2000),
+      endpoint: z.string(),
+    }),
+  }),
+
+  importProviderModels: defineContract({
+    channel: "custom-providers:import-models",
+    input: z.object({
+      providerId: z.string(),
+      models: z
+        .array(
+          z.object({
+            apiName: z.string().min(1),
+            displayName: z.string().min(1),
+          }),
+        )
+        .min(1)
+        .max(500),
+    }),
+    output: z.object({ imported: z.number() }),
+  }),
+
+  setCustomModelEnabled: defineContract({
+    channel: "custom-models:set-enabled",
+    input: z.object({
+      modelId: z.number(),
+      enabled: z.boolean(),
+    }),
+    output: z.object({ ok: z.literal(true) }),
   }),
 } as const;
 

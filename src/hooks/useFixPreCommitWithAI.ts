@@ -59,12 +59,14 @@ export function useFixPreCommitWithAI() {
   const queryClient = useQueryClient();
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
-  const isPro = settings ? isDyadProEnabled(settings) : false;
-  const isAvailabilityLoading = settings === null || (!isPro && isQuotaLoading);
+  // Pro features unlocked in this fork — the fix action is available to
+  // everyone (only the tool consent can disable it).
+  void isDyadProEnabled;
+  const isPro = true;
+  const isAvailabilityLoading = settings === null;
   const isAvailable =
     settings !== null &&
-    settings.agentToolConsents?.run_pre_commit !== "never" &&
-    (isPro || (!isQuotaLoading && !quotaError && !isQuotaExceeded));
+    settings.agentToolConsents?.run_pre_commit !== "never";
   const unavailableReason: FixPreCommitUnavailableReason | null =
     isAvailable || isAvailabilityLoading
       ? null

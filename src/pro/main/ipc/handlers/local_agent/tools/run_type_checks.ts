@@ -6,6 +6,12 @@ import {
   escapeXmlContent,
 } from "./types";
 import {
+  hasRunningE2bSandboxForApp,
+  isE2bRuntimeModeActive,
+  runE2bCommandForApp,
+} from "@/ipc/utils/e2b_sandbox_provider";
+import { syncCloudSandboxDirtyPaths } from "@/ipc/utils/cloud_sandbox_provider";
+import {
   runTypeScriptCheck,
   getTypeCheckPreconditionGuidance,
   getTypeCheckPreconditionKind,
@@ -172,6 +178,31 @@ export const runTypeChecksTool: ToolDefinition<
       : "Check types for all files",
 
   execute: async (args, ctx: AgentContext) => {
+    // E2B runtime mode: type checks run inside the project's remote sandbox
+    // where node_modules/tsc live, and the output is returned as text.
+    if (isE2bRuntimeModeActive() && hasRunningE2bSandboxForApp(ctx.appId)) {
+      ctx.onXmlStream(
+        `<dyad-status title="${escapeXmlAttr("Type checking in E2B sandbox")}"></dyad-status>`,
+      );
+      await syncCloudSandboxDirtyPaths({ appId: ctx.appId });
+      const result = await runE2bCommandForApp(
+        ctx.appId,
+        "pnpm exec tsc --noEmit --pretty false 2>&1 || true",
+        5 * 60 * 1000,
+      );
+      const output = (result.stdout + (result.stderr ? `\n${result.stderr}` : "")).trim();
+      const body =
+        result.exitCode === 0 || output.length === 0
+          ? "Type checking passed inside the E2B sandbox (no errors)."
+          : `Type checking found errors inside the E2B sandbox:\n\n${output.slice(-5000)}`;
+      ctx.onXmlComplete(
+        `<dyad-status title="${escapeXmlAttr(
+          result.exitCode === 0 ? "Type check passed (E2B)" : "Type check errors (E2B)",
+        )}" state="${result.exitCode === 0 ? "finished" : "warning"}">\n${escapeXmlContent(body)}\n</dyad-status>`,
+      );
+      return body;
+    }
+
     const paths = ctx.runTypeScriptForWholeProject ? undefined : args.paths;
     // Stream initial XML with in-progress state
     const title =

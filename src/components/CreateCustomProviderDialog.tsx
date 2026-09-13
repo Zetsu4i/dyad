@@ -30,6 +30,7 @@ export function CreateCustomProviderDialog({
   const [name, setName] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [envVarName, setEnvVarName] = useState("");
+  const [apiType, setApiType] = useState<"openai" | "anthropic">("openai");
   const [errorMessage, setErrorMessage] = useState("");
   const isEditMode = Boolean(editingProvider);
 
@@ -45,12 +46,14 @@ export function CreateCustomProviderDialog({
       setName(editingProvider.name || "");
       setApiBaseUrl(editingProvider.apiBaseUrl || "");
       setEnvVarName(editingProvider.envVarName || "");
+      setApiType(editingProvider.apiType === "anthropic" ? "anthropic" : "openai");
     } else if (!isOpen) {
       // Reset form when dialog closes
       setId("");
       setName("");
       setApiBaseUrl("");
       setEnvVarName("");
+      setApiType("openai");
       setErrorMessage("");
     }
   }, [editingProvider, isOpen]);
@@ -69,6 +72,7 @@ export function CreateCustomProviderDialog({
           name: name.trim(),
           apiBaseUrl: apiBaseUrl.trim(),
           envVarName: envVarName.trim() || undefined,
+          apiType,
         });
       } else {
         await createProvider({
@@ -76,6 +80,7 @@ export function CreateCustomProviderDialog({
           name: name.trim(),
           apiBaseUrl: apiBaseUrl.trim(),
           envVarName: envVarName.trim() || undefined,
+          apiType,
         });
       }
 
@@ -84,6 +89,7 @@ export function CreateCustomProviderDialog({
       setName("");
       setApiBaseUrl("");
       setEnvVarName("");
+      setApiType("openai");
 
       onSuccess();
     } catch (error) {
@@ -160,6 +166,28 @@ export function CreateCustomProviderDialog({
             />
             <p className="text-xs text-muted-foreground">
               The base URL for the API endpoint.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="apiType">API Type</Label>
+            <select
+              id="apiType"
+              value={apiType}
+              onChange={(e) =>
+                setApiType(e.target.value as "openai" | "anthropic")
+              }
+              disabled={isLoading}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs"
+            >
+              <option value="openai">OpenAI-compatible (/v1/chat/completions)</option>
+              <option value="anthropic">
+                Anthropic-compatible (/v1/messages)
+              </option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              The wire protocol this endpoint speaks. Most gateways (OpenRouter,
+              LiteLLM, custom proxies) are OpenAI-compatible.
             </p>
           </div>
 

@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { AlertTriangle, PlusIcon, TrashIcon } from "lucide-react";
+import { AlertTriangle, CloudDownload, PlusIcon, TrashIcon } from "lucide-react";
+import { ModelDiscoveryDialog } from "@/components/settings/ModelDiscoveryDialog";
+import { ipc } from "@/ipc/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,12 +21,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
+import { showError } from "@/lib/toast";
 
 interface ModelsSectionProps {
   providerId: string;
 }
 
 export function ModelsSection({ providerId }: ModelsSectionProps) {
+  const [isDiscoveryDialogOpen, setIsDiscoveryDialogOpen] = useState(false);
   const [isCustomModelDialogOpen, setIsCustomModelDialogOpen] = useState(false);
   const [isEditModelDialogOpen, setIsEditModelDialogOpen] = useState(false);
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] =
@@ -91,10 +95,28 @@ export function ModelsSection({ providerId }: ModelsSectionProps) {
 
   return (
     <div className="mt-8 border-t pt-6">
-      <h2 className="text-2xl font-semibold mb-4">Models</h2>
-      <p className="text-muted-foreground mb-4">
-        Manage specific models available through this provider.
-      </p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-semibold">Models</h2>
+          <p className="text-muted-foreground">
+            Manage specific models available through this provider.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsDiscoveryDialogOpen(true)}
+        >
+          <CloudDownload className="size-4" />
+          Fetch models from API
+        </Button>
+      </div>
+
+      <ModelDiscoveryDialog
+        isOpen={isDiscoveryDialogOpen}
+        onClose={() => setIsDiscoveryDialogOpen(false)}
+        providerId={providerId}
+      />
 
       {/* Custom Models List Area */}
       {modelsLoading && (
@@ -129,6 +151,34 @@ export function ModelsSection({ providerId }: ModelsSectionProps) {
                 </h4>
                 {model.type === "custom" && (
                   <div className="flex gap-2">
+                    {model.id != null && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title={
+                          model.enabled === false
+                            ? "Enable this model (show it in the model picker)"
+                            : "Disable this model (hide it from the model picker)"
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void ipc.languageModel
+                            .setCustomModelEnabled({
+                              modelId: model.id!,
+                              enabled: model.enabled === false,
+                            })
+                            .then(() => {
+                              invalidateModels();
+                            })
+                            .catch((error: Error) => {
+                              showError(`Failed to update model: ${error.message}`);
+                            });
+                        }}
+                        className="h-8 px-2 text-[12px] font-normal"
+                      >
+                        {model.enabled === false ? "Disabled" : "Enabled"}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

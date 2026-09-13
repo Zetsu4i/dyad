@@ -23,6 +23,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { IpcMainInvokeEvent } from "electron";
 import { DyadError, DyadErrorKind } from "@/errors/dyad_error";
+import { readSettings } from "@/main/settings";
 
 const logger = log.scope("language_model_handlers");
 const handle = createLoggedHandler(logger);
@@ -87,6 +88,7 @@ export function registerLanguageModelHandlers() {
         name,
         api_base_url: apiBaseUrl,
         env_var_name: envVarName || null,
+        api_type: params.apiType ?? "openai",
       });
 
       // Return the newly created provider
@@ -95,6 +97,7 @@ export function registerLanguageModelHandlers() {
         name,
         apiBaseUrl,
         envVarName,
+        apiType: params.apiType ?? "openai",
         type: "custom",
       };
     },
@@ -156,6 +159,7 @@ export function registerLanguageModelHandlers() {
           description: description || null,
           max_output_tokens: maxOutputTokens || null,
           context_window: contextWindow || null,
+          enabled: params.enabled ?? true,
         })
         .run();
       return Number(result.lastInsertRowid);
@@ -293,6 +297,7 @@ export function registerLanguageModelHandlers() {
             name,
             api_base_url: apiBaseUrl,
             env_var_name: envVarName || null,
+            api_type: params.apiType ?? "openai",
           })
           .where(
             eq(languageModelProvidersSchema.id, CUSTOM_PROVIDER_PREFIX + id),
@@ -311,6 +316,7 @@ export function registerLanguageModelHandlers() {
           name,
           apiBaseUrl,
           envVarName,
+          apiType: params.apiType ?? "openai",
           type: "custom" as const,
         };
       });
@@ -489,7 +495,7 @@ export function registerLanguageModelHandlers() {
     "get-language-models",
     async (
       event: IpcMainInvokeEvent,
-      params: { providerId: string },
+      params: { providerId: string; includeDisabled?: boolean },
     ): Promise<LanguageModel[]> => {
       if (!params || typeof params.providerId !== "string") {
         throw new DyadError(
@@ -511,7 +517,10 @@ export function registerLanguageModelHandlers() {
           DyadErrorKind.External,
         );
       }
-      return getLanguageModels({ providerId: params.providerId });
+      return getLanguageModels({
+        providerId: params.providerId,
+        includeDisabled: params.includeDisabled === true,
+      });
     },
   );
 
@@ -521,4 +530,145 @@ export function registerLanguageModelHandlers() {
       return getLanguageModelsByProviders();
     },
   );
+
+  // ==========================================================================
+  // Model discovery for custom (BYO) providers
+  // ==========================================================================
+
+  handleTyped(
+    languageModelContracts.fetchProviderModels,
+    async (_event, { providerId }) => {
+      const providers = await getLanguageModelProviders();
+      const provider = providers.find((p) => p.id === providerId);
+      if (!provider || provider.type !== "custom") {
+        throw new DyadError(
+          `Custom provider with ID "${providerId}" not found`,
+          DyadErrorKind.NotFound,
+        );
+      }
+      const apiKey =
+        readSettings().providerSettings?.[providerId]?.apiKey?.value ??
+        (provider.envVarName ? process.env[provider.envVarName] : undefined);
+
+      const base = provider.apiBaseUrl!.replace(/\/+$/, "");
+      const candidates =
+        provider.apiType === "anthropic"
+          ? [`${base}/v1/models`, `${base}/models`]
+          : [`${base}/models`, `${base}/v1/models`];
+
+      let response: Response | null = null;
+      let endpoint = "";
+      let lastError: unknown = null;
+      for (const candidate of candidates) {
+        try {
+          const attempt = await fetch(candidate, {
+            headers: {
+              ...(apiKey ? { "x-api-key": apiKey } : {}),
+              ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+              "anthropic-version": "2023-06-01",
+            },
+          });
+          if (attempt.ok) {
+            response = attempt;
+            endpoint = candidate;
+            break;
+          }
+          lastError = new Error(`HTTP ${attempt.status} from ${candidate}`);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (!response) {
+        throw new DyadError(
+          `Could not fetch the model list from ${base}/models or ${base}/v1/models: ${
+            lastError instanceof Error ? lastError.message : String(lastError)
+          }`,
+          DyadErrorKind.External,
+        );
+      }
+
+      const parsed = (await response.json()) as {
+        data?: Array<{ id?: string; name?: string }>;
+        models?: Array<{ id?: string; name?: string }>;
+      };
+      const rawModels = parsed.data ?? parsed.models ?? [];
+      const describe = (entry: { id?: string; name?: string }): string =>
+        (entry.id ?? entry.name ?? "").trim();
+      const existing = db
+        .select({ apiName: languageModelsSchema.apiName })
+        .from(languageModelsSchema)
+        .where(eq(languageModelsSchema.customProviderId, providerId))
+        .all();
+      const existingNames = new Set(existing.map((row) => row.apiName));
+
+      const models = rawModels
+        .map((entry) => ({
+          apiName: describe(entry),
+          displayName: describe(entry),
+        }))
+        .filter((model) => model.apiName.length > 0)
+        .slice(0, 2000)
+        .map((model) => ({
+          ...model,
+          alreadyImported: existingNames.has(model.apiName),
+        }));
+
+      return { models, endpoint };
+    },
+  );
+
+  handleTyped(
+    languageModelContracts.importProviderModels,
+    async (_event, { providerId, models }) => {
+      const providers = await getLanguageModelProviders();
+      const provider = providers.find((p) => p.id === providerId);
+      if (!provider || provider.type !== "custom") {
+        throw new DyadError(
+          `Custom provider with ID "${providerId}" not found`,
+          DyadErrorKind.NotFound,
+        );
+      }
+      const existing = db
+        .select({ apiName: languageModelsSchema.apiName })
+        .from(languageModelsSchema)
+        .where(eq(languageModelsSchema.customProviderId, providerId))
+        .all();
+      const existingNames = new Set(existing.map((row) => row.apiName));
+      const fresh = models.filter((model) => !existingNames.has(model.apiName));
+      if (fresh.length === 0) {
+        return { imported: 0 };
+      }
+      db.insert(languageModelsSchema).values(
+        fresh.map((model) => ({
+          displayName: model.displayName,
+          apiName: model.apiName,
+          customProviderId: providerId,
+          enabled: true,
+        })),
+      ).run();
+      logger.info(
+        `Imported ${fresh.length} models for custom provider ${providerId}.`,
+      );
+      return { imported: fresh.length };
+    },
+  );
+
+  handleTyped(
+    languageModelContracts.setCustomModelEnabled,
+    async (_event, { modelId, enabled }) => {
+      const result = db
+        .update(languageModelsSchema)
+        .set({ enabled, updatedAt: new Date() })
+        .where(eq(languageModelsSchema.id, modelId))
+        .run();
+      if (result.changes === 0) {
+        throw new DyadError(
+          `Model with ID "${modelId}" not found`,
+          DyadErrorKind.NotFound,
+        );
+      }
+      return { ok: true as const };
+    },
+  );
+
 }

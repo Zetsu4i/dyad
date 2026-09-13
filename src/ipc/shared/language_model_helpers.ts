@@ -35,6 +35,7 @@ export async function getLanguageModelProviders(): Promise<
       name: cp.name,
       apiBaseUrl: cp.api_base_url,
       envVarName: cp.env_var_name ?? undefined,
+      apiType: cp.api_type === "anthropic" ? "anthropic" : "openai",
       type: "custom",
       // hasFreeTier, websiteUrl, gatewayPrefix are not in the custom DB schema
       // They will be undefined unless overridden by hardcoded values if IDs match
@@ -94,8 +95,11 @@ export async function getLanguageModelProviders(): Promise<
  */
 export async function getLanguageModels({
   providerId,
+  includeDisabled = false,
 }: {
   providerId: string;
+  /** Settings passes true so disabled models remain visible/editable. */
+  includeDisabled?: boolean;
 }): Promise<LanguageModel[]> {
   const allProviders = await getLanguageModelProviders();
   const provider = allProviders.find((p) => p.id === providerId);
@@ -117,6 +121,7 @@ export async function getLanguageModels({
         description: languageModelsSchema.description,
         maxOutputTokens: languageModelsSchema.max_output_tokens,
         contextWindow: languageModelsSchema.context_window,
+        enabled: languageModelsSchema.enabled,
       })
       .from(languageModelsSchema)
       .where(
@@ -125,14 +130,19 @@ export async function getLanguageModels({
           : eq(languageModelsSchema.builtinProviderId, providerId),
       );
 
-    customModels = customModelsDb.map((model) => ({
-      ...model,
-      description: model.description ?? "",
-      tag: undefined,
-      maxOutputTokens: model.maxOutputTokens ?? undefined,
-      contextWindow: model.contextWindow ?? undefined,
-      type: "custom",
-    }));
+    customModels = customModelsDb
+      // Disabled (discovered) models stay out of the builder's model picker
+      // unless explicitly requested (Settings model management).
+      .filter((model) => includeDisabled || model.enabled !== false)
+      .map((model) => ({
+        ...model,
+        description: model.description ?? "",
+        tag: undefined,
+        maxOutputTokens: model.maxOutputTokens ?? undefined,
+        contextWindow: model.contextWindow ?? undefined,
+        enabled: model.enabled ?? true,
+        type: "custom",
+      }));
   } catch (error) {
     console.error(
       `Error fetching custom models for provider "${providerId}" from DB:`,

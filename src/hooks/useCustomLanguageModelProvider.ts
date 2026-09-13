@@ -39,6 +39,7 @@ export function useCustomLanguageModelProvider() {
         name: params.name.trim(),
         apiBaseUrl: params.apiBaseUrl.trim(),
         envVarName: params.envVarName?.trim() || undefined,
+        apiType: params.apiType,
       });
     },
     onSuccess: () => {
@@ -80,6 +81,7 @@ export function useCustomLanguageModelProvider() {
         name: params.name.trim(),
         apiBaseUrl: params.apiBaseUrl.trim(),
         envVarName: params.envVarName?.trim() || undefined,
+        apiType: params.apiType,
       });
     },
     onSuccess: () => {

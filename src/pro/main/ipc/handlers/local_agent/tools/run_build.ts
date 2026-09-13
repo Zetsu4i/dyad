@@ -28,6 +28,12 @@ import {
 import type { AppFrameworkType } from "@/lib/framework_constants";
 import { getUserDataPath } from "@/paths/paths";
 import type { AgentContext, ToolDefinition } from "./types";
+import {
+  hasRunningE2bSandboxForApp,
+  isE2bRuntimeModeActive,
+  runE2bCommandForApp,
+} from "@/ipc/utils/e2b_sandbox_provider";
+import { syncCloudSandboxDirtyPaths } from "@/ipc/utils/cloud_sandbox_provider";
 import { escapeXmlAttr, escapeXmlContent } from "./types";
 
 const runBuildSchema = z.object({});
@@ -1294,6 +1300,32 @@ function streamBuildOutput(ctx: AgentContext, accumulatedOutput: string): void {
   );
 }
 
+/**
+ * E2B runtime mode: production builds run INSIDE the project's remote sandbox
+ * (matching where dependencies were installed), instead of on the host.
+ */
+async function runE2bBuild(ctx: AgentContext): Promise<string> {
+  ctx.onXmlStream(
+    `<dyad-status title="${escapeXmlAttr("Building in E2B sandbox")}"></dyad-status>`,
+  );
+  await syncCloudSandboxDirtyPaths({ appId: ctx.appId });
+  const result = await runE2bCommandForApp(
+    ctx.appId,
+    "pnpm run build",
+    10 * 60 * 1000,
+  );
+  const truncated = (result.stdout + (result.stderr ? `\n${result.stderr}` : ""))
+    .slice(-4000);
+  if (result.exitCode === 0) {
+    const body = `Build succeeded inside the E2B sandbox.\n\nLast output:\n${truncated}`;
+    completeStatus(ctx, "Build succeeded (E2B)", body, "finished");
+    return body;
+  }
+  const body = `Build failed inside the E2B sandbox with exit code ${result.exitCode}.\n\nOutput:\n${truncated}`;
+  completeStatus(ctx, "Build failed (E2B)", body, "warning");
+  return body;
+}
+
 export const runBuildTool: ToolDefinition<z.infer<typeof runBuildSchema>> = {
   name: "run_build",
   description: `Run the app's production build as a selective, expensive verification step.
@@ -1314,12 +1346,22 @@ export const runBuildTool: ToolDefinition<z.infer<typeof runBuildSchema>> = {
       ? undefined
       : '<dyad-status title="Running production build"></dyad-status>',
 
+
   execute: async (_args, ctx) => {
     if (activeBuilds.has(ctx.appId)) {
       const body =
         "A production build is already running for this app. Wait for it to finish instead of starting another one.";
       completeStatus(ctx, "Build already running", body, "warning");
       return body;
+    }
+
+    if (isE2bRuntimeModeActive() && hasRunningE2bSandboxForApp(ctx.appId)) {
+      activeBuilds.add(ctx.appId);
+      try {
+        return await runE2bBuild(ctx);
+      } finally {
+        activeBuilds.delete(ctx.appId);
+      }
     }
 
     activeBuilds.add(ctx.appId);
