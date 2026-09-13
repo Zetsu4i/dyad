@@ -4,7 +4,6 @@ import { usePostHog } from "posthog-js/react";
 import { useEffect, useRef, useState } from "react";
 
 import { selectedAppIdAtom } from "@/atoms/appAtoms";
-import { DyadProTrialDialog } from "@/components/DyadProTrialDialog";
 import { useSettings } from "@/hooks/useSettings";
 import { useUserBudgetInfo } from "@/hooks/useUserBudgetInfo";
 import { ipc, type UserBudgetInfo } from "@/ipc/types";
@@ -26,55 +25,6 @@ export interface PromoMessageConfig {
 }
 
 export const PROMO_MESSAGES: PromoMessageConfig[] = [
-  {
-    id: "pro-trial",
-    text: "Build more with Dyad Pro — free for 7 days.",
-    cta: "Start Free Trial",
-    target: { type: "trial-dialog" },
-    weight: 3,
-  },
-  {
-    id: "agent-mode",
-    text: "Let Dyad Pro fix bugs with Agent mode.",
-    cta: "Get Dyad Pro",
-    target: { type: "trial-dialog" },
-    weight: 3,
-  },
-  {
-    id: "custom-theme",
-    text: "Give your app a unique look with AI theme generator.",
-    cta: "Get Dyad Pro",
-    target: { type: "trial-dialog" },
-    weight: 2,
-  },
-  {
-    id: "speech-to-text",
-    text: "Tired of typing? Talk to Dyad with your voice.",
-    cta: "Get Dyad Pro",
-    target: { type: "trial-dialog" },
-    weight: 3,
-  },
-  {
-    id: "web-search",
-    text: "Let Dyad use the web for fresh information and better builds.",
-    cta: "Get Dyad Pro",
-    target: { type: "trial-dialog" },
-    weight: 2,
-  },
-  {
-    id: "pro-tools",
-    text: "Recreate a website with Dyad Pro.",
-    cta: "Unlock Dyad Pro",
-    target: { type: "trial-dialog" },
-    weight: 2,
-  },
-  {
-    id: "all-models",
-    text: "Access all the leading AI models in one subscription.",
-    cta: "Get Dyad Pro",
-    target: { type: "trial-dialog" },
-    weight: 3,
-  },
   {
     id: "github-star",
     text: "Enjoying Dyad? Star us on GitHub.",
@@ -196,7 +146,6 @@ export function usePromoMessage(chatId?: number): PromoMessageState {
  */
 export function PromoMessage({ seed }: { seed: number }) {
   const posthog = usePostHog();
-  const [isTrialDialogOpen, setIsTrialDialogOpen] = useState(false);
   const [devMessageIndex, setDevMessageIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -212,10 +161,10 @@ export function PromoMessage({ seed }: { seed: number }) {
   const handleCtaClick = () => {
     posthog?.capture("promo_click", { messageId: message.id });
     if (message.target.type === "trial-dialog") {
-      setIsTrialDialogOpen(true);
-    } else {
-      ipc.system.openExternalUrl(message.target.url);
+      // Pro promos were removed from this fork; nothing to open.
+      return;
     }
+    ipc.system.openExternalUrl(message.target.url);
   };
 
   const handleDevCycle = () => {
@@ -266,11 +215,6 @@ export function PromoMessage({ seed }: { seed: number }) {
           </button>
         )}
       </div>
-      <DyadProTrialDialog
-        isOpen={isTrialDialogOpen}
-        onClose={() => setIsTrialDialogOpen(false)}
-        utmCampaign={`streaming-promo-${message.id}`}
-      />
     </>
   );
 }

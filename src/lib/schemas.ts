@@ -688,6 +688,20 @@ export function isDyadProEnabled(settings: UserSettings): boolean {
   return settings.enableDyadPro === true && hasDyadProKey(settings);
 }
 
+/**
+ * This fork unlocks all Pro-gated LOCAL features (full Agent with
+ * sub-agents, MCP auto-approve, advanced tool surface) for everyone.
+ *
+ * It deliberately does NOT touch `isDyadProEnabled`: routing model calls
+ * through the hosted Dyad engine (engine.dyad.sh) still requires a real
+ * engine API key, exactly like any other external BYO provider. This only
+ * removes this fork's own feature gating — it does not circumvent external
+ * services.
+ */
+export function isProFeaturesUnlocked(): boolean {
+  return true;
+}
+
 export function hasDyadProKey(settings: UserSettings): boolean {
   return !!settings.providerSettings?.auto?.apiKey?.value;
 }
@@ -739,9 +753,11 @@ export function getEffectiveDefaultChatMode(
  * - User is using local-agent chat mode
  */
 export function isBasicAgentMode(settings: UserSettings): boolean {
-  return (
-    !isDyadProEnabled(settings) && settings.selectedChatMode === "local-agent"
-  );
+  // Pro features are unlocked in this fork, so the downgraded Basic Agent
+  // prompt variant never applies — every local-agent chat gets the full
+  // Agent experience.
+  void settings;
+  return false;
 }
 
 export function isSupabaseConnected(settings: UserSettings | null): boolean {

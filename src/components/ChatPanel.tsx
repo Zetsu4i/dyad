@@ -107,11 +107,10 @@ export function ChatPanel({
   const { settings } = useSettings();
   const { selectedMode, selectedModel, setChatMode } = useChatMode(chatId);
   const { isQuotaExceeded } = useFreeAgentQuota();
-  const showFreeAgentQuotaBanner =
-    settings &&
-    !isDyadProEnabled(settings) &&
-    selectedMode === "local-agent" &&
-    isQuotaExceeded;
+  // Pro gating removed in this fork — the free-agent quota banner never shows.
+  void settings;
+  void isQuotaExceeded;
+  const showFreeAgentQuotaBanner = false;
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
