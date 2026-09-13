@@ -7,6 +7,8 @@ export interface Template {
   isOfficial: boolean;
   isExperimental?: boolean;
   requiresNeon?: boolean;
+  /** Which project mode this template belongs to. Defaults to web. */
+  mode?: "web" | "mobile" | "general";
 }
 
 // API Template interface from the external API
@@ -63,5 +65,35 @@ export const localTemplatesData: Template[] = [
     isOfficial: true,
     isExperimental: true,
     requiresNeon: true,
+    mode: "web",
+  },
+  {
+    id: "expo",
+    title: "Expo Mobile App",
+    description:
+      "React Native with Expo: run on iOS/Android devices and in the browser. Executes in the E2B sandbox with QR/device info in the console.",
+    imageUrl:
+      "https://github.com/user-attachments/assets/5b700eab-b28c-498e-96de-8649b14c16d9",
+    isOfficial: true,
+    mode: "mobile",
+  },
+  {
+    id: "general",
+    title: "General Sandbox Project",
+    description:
+      "A general-purpose cloud coding environment: scripts, CLI tools, data processing, builds — not tied to web or mobile. Use with E2B mode.",
+    imageUrl:
+      "https://github.com/user-attachments/assets/5b700eab-b28c-498e-96de-8649b14c16d9",
+    isOfficial: true,
+    mode: "general",
   },
 ];
+
+export function templatesForMode(
+  templates: Template[],
+  mode: "web" | "mobile" | "general",
+): Template[] {
+  return templates.filter(
+    (template) => (template.mode ?? "web") === mode,
+  );
+}

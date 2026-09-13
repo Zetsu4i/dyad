@@ -16,6 +16,7 @@ export const AppBaseSchema = z.object({
   id: z.number(),
   name: z.string(),
   path: z.string(),
+  mode: z.enum(["web", "mobile", "general"]).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   githubOrg: z.string().nullable(),
@@ -61,6 +62,10 @@ export const CreateAppParamsSchema = z.object({
   name: z.string().min(1),
   initialChatMode: ChatModeSchema.optional(),
   firstPromptCreationOperationId: z.string().min(1).optional(),
+  /** Project mode (web | mobile | general). Defaults to web. */
+  mode: z.enum(["web", "mobile", "general"]).optional(),
+  /** Template to instantiate. Defaults to the settings selection. */
+  templateId: z.string().optional(),
 });
 
 /**

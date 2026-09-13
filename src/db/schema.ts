@@ -59,6 +59,12 @@ export const appCollections = sqliteTable(
 export const apps = sqliteTable("apps", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
+  // Project mode: web | mobile | general (drives templates/preview/agent).
+  mode: text("mode", {
+    enum: ["web", "mobile", "general"],
+  })
+    .notNull()
+    .default("web"),
   path: text("path").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()

@@ -10,6 +10,137 @@ import { DyadError, DyadErrorKind } from "@/errors/dyad_error";
 
 const logger = log.scope("createFromTemplate");
 
+
+/**
+ * Minimal, valid Expo (React Native) starter. Written inline so the template
+ * never depends on an external repository being reachable.
+ */
+async function writeExpoStarter(fullAppPath: string): Promise<void> {
+  await fs.ensureDir(fullAppPath);
+  await fs.writeJSON(
+    path.join(fullAppPath, "package.json"),
+    {
+      name: "dyad-expo-app",
+      version: "1.0.0",
+      main: "node_modules/expo/AppEntry.js",
+      scripts: {
+        dev: "expo start --web",
+        start: "expo start",
+        android: "expo start --android",
+        ios: "expo start --ios",
+        web: "expo start --web",
+      },
+      dependencies: {
+        expo: "~52.0.0",
+        react: "18.3.1",
+        "react-native": "0.76.5",
+        "react-dom": "18.3.1",
+      },
+      devDependencies: {
+        "@types/react": "~18.3.12",
+        typescript: "~5.3.3",
+      },
+      private: true,
+    },
+    { spaces: 2 },
+  );
+  await fs.writeJSON(
+    path.join(fullAppPath, "app.json"),
+    {
+      expo: {
+        name: "Dyad Mobile App",
+        slug: "dyad-mobile-app",
+        version: "1.0.0",
+        orientation: "portrait",
+        userInterfaceStyle: "light",
+        web: { bundler: "metro", output: "single" },
+        platforms: ["ios", "android", "web"],
+      },
+    },
+    { spaces: 2 },
+  );
+  await fs.writeFile(
+    path.join(fullAppPath, "App.tsx"),
+    `import { StyleSheet, Text, View } from "react-native";
+
+export default function App() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Welcome to your Dyad mobile app</Text>
+      <Text style={styles.subtitle}>Edit App.tsx and ask the agent to build features.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+  },
+});
+`,
+    "utf8",
+  );
+  await fs.writeFile(
+    path.join(fullAppPath, "tsconfig.json"),
+    JSON.stringify(
+      {
+        extends: "expo/tsconfig.base",
+        compilerOptions: { strict: true },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  await fs.writeFile(
+    path.join(fullAppPath, ".gitignore"),
+    "node_modules/\n.expo/\ndist/\nweb-build/\nexpo-env.d.ts\n",
+    "utf8",
+  );
+}
+
+/**
+ * General-mode starter: an empty-but-documented project folder. The sandbox
+ * is the workspace; the agent fills it in with run_command + write_file.
+ */
+async function writeGeneralStarter(fullAppPath: string): Promise<void> {
+  await fs.ensureDir(fullAppPath);
+  await fs.writeFile(
+    path.join(fullAppPath, "README.md"),
+    `# Project
+
+This is a general-purpose project that runs inside an E2B sandbox.
+
+- The agent can run shell commands in the sandbox with the run_command tool
+  (working directory /home/user/app).
+- Files you create with write_file persist in the project; files created by
+  sandbox commands stay in the sandbox session.
+- Use the E2B console in the preview panel to run commands yourself.
+`,
+    "utf8",
+  );
+  await fs.writeFile(
+    path.join(fullAppPath, ".gitignore"),
+    "node_modules/\n.env\n",
+    "utf8",
+  );
+}
+
+
 export async function createFromTemplate({
   fullAppPath,
   templateId: requestedTemplateId,
@@ -27,6 +158,16 @@ export async function createFromTemplate({
       fs.existsSync(sourceScaffoldPath) ? sourceScaffoldPath : repoScaffoldPath,
       fullAppPath,
     );
+    return;
+  }
+
+  if (templateId === "expo") {
+    await writeExpoStarter(fullAppPath);
+    return;
+  }
+
+  if (templateId === "general") {
+    await writeGeneralStarter(fullAppPath);
     return;
   }
 

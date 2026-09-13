@@ -1,0 +1,1 @@
+ALTER TABLE `apps` ADD `mode` text DEFAULT 'web' NOT NULL;

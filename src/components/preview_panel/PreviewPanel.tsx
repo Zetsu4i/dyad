@@ -25,6 +25,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 import { Console } from "./Console";
+import { E2bConsole } from "./E2bConsole";
 import { runAppLifecycleInBackground, useRunApp } from "@/hooks/useRunApp";
 import { PublishPanel } from "./PublishPanel";
 import { SecurityPanel } from "./SecurityPanel";
@@ -311,6 +312,8 @@ export function PreviewPanel() {
                       }
                     }}
                   />
+                ) : previewMode === "preview" && app?.mode === "general" ? (
+                  <E2bConsole appId={selectedAppId} />
                 ) : previewMode === "preview" ? (
                   useNativePreview ? (
                     <PreviewWebContentsView

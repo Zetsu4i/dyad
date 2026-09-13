@@ -154,6 +154,13 @@ export type VertexProviderSetting = z.infer<typeof VertexProviderSettingSchema>;
 export const RuntimeModeSchema = z.enum(["web-sandbox", "local-node", "unset"]);
 export type RuntimeMode = z.infer<typeof RuntimeModeSchema>;
 
+/**
+ * Project mode: the kind of thing the user is building. Drives which
+ * templates are offered, how the preview behaves, and agent guidance.
+ */
+export const AppModeSchema = z.enum(["web", "mobile", "general"]);
+export type AppMode = z.infer<typeof AppModeSchema>;
+
 export const RuntimeMode2Schema = z.enum(["host", "docker", "cloud", "e2b"]);
 export type RuntimeMode2 = z.infer<typeof RuntimeMode2Schema>;
 
@@ -586,6 +593,8 @@ const BaseUserSettingsFields = {
   previewIdleTimeoutPolicy: z.enum(["default", "never"]).optional(),
   // E2B remote sandbox execution (BYO API key). See E2bSettingsSchema.
   e2b: E2bSettingsSchema.optional(),
+  // Default mode preselected in the new-project dialog.
+  defaultProjectMode: AppModeSchema.optional(),
 };
 
 /**

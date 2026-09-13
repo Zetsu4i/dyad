@@ -865,6 +865,7 @@ export function registerAppHandlers() {
         .values({
           name: appName,
           path: appPath,
+          mode: params.mode ?? "web",
           needsAppBlueprint: settings.enableAppBlueprint,
           // Opt newly created apps into E2E testing when the user has enabled
           // the "testing for new apps" setting. Otherwise fall back to the
@@ -909,6 +910,7 @@ export function registerAppHandlers() {
 
       await createFromTemplate({
         fullAppPath,
+        templateId: params.templateId,
       });
 
       // Ensure `.dyad/` is gitignored before the initial commit so the agent's
