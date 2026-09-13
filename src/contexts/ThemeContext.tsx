@@ -19,7 +19,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     // Try to get the saved theme from localStorage
     const savedTheme = localStorage.getItem("theme") as Theme;
-    return savedTheme || "system";
+    // Default to the dark enterprise theme; explicit user choice always wins.
+    return savedTheme || "dark";
   });
   const [systemThemeFallback] = useState(
     () => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false,

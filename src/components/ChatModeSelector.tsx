@@ -110,7 +110,7 @@ export function ChatModeSelector() {
                   selectedMode === "build" || selectedMode === "local-agent"
                     ? "text-foreground/80 hover:text-foreground hover:bg-muted/60"
                     : selectedMode === "ask"
-                      ? "bg-purple-500/10 text-purple-600 hover:bg-purple-500/15 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/20"
+                      ? "bg-primary/10 text-primary hover:bg-primary/15 dark:bg-primary/15 dark:text-primary dark:hover:bg-primary/20"
                       : selectedMode === "plan"
                         ? "bg-blue-500/10 text-blue-600 hover:bg-blue-500/15 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/20"
                         : "text-foreground/80 hover:text-foreground hover:bg-muted/60",
