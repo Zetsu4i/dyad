@@ -53,6 +53,8 @@ export function RuntimeModeSelector() {
 
   const isDockerMode = settings?.runtimeMode2 === "docker";
   const isCloudMode = settings?.runtimeMode2 === "cloud";
+  const isE2bMode = settings?.runtimeMode2 === "e2b";
+  const hasE2bKey = !!settings.e2b?.apiKey?.value;
   const hasCloudSandboxAccess = Boolean(userBudget);
   const showCloudSandboxOption = shouldShowCloudSandboxOption({
     runtimeMode: settings.runtimeMode2 ?? "host",
@@ -72,6 +74,13 @@ export function RuntimeModeSelector() {
       value === "cloud" &&
       (!hasCloudSandboxAccess || !showCloudSandboxOption)
     ) {
+      return;
+    }
+
+    if (value === "e2b" && !hasE2bKey) {
+      showError(
+        "Add your E2B API key in Settings → E2B Sandboxes before switching to E2B mode.",
+      );
       return;
     }
 
@@ -105,6 +114,7 @@ export function RuntimeModeSelector() {
           <SelectContent>
             <SelectItem value="host">Local (default)</SelectItem>
             <SelectItem value="docker">Docker (experimental)</SelectItem>
+            <SelectItem value="e2b">E2B Sandbox (remote)</SelectItem>
             {showCloudSandboxOption && (
               <SelectItem disabled={!hasCloudSandboxAccess} value="cloud">
                 Cloud Sandbox (Pro)
@@ -146,6 +156,19 @@ export function RuntimeModeSelector() {
         <div className="text-sm text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/30 p-2 rounded">
           Cloud Sandbox runs previews remotely and gives you a shareable preview
           link. Note: running in cloud mode consumes Pro credits.
+        </div>
+      )}
+      {isE2bMode && (
+        <div className="text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded">
+          Apps run inside remote E2B sandboxes (execute, install, build, preview).
+          Sandboxes pause automatically when you leave a project or close Dyad,
+          and resume with their filesystem intact when you reopen it.
+        </div>
+      )}
+      {isE2bMode && !hasE2bKey && (
+        <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+          E2B mode is selected but no E2B API key is configured. Add one in
+          the E2B Sandboxes section below.
         </div>
       )}
       <AlertDialog

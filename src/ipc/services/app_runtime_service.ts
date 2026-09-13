@@ -15,6 +15,7 @@ import { readSettings } from "@/main/settings";
 import {
   shouldShowPnpmMinimumReleaseAgeWarning,
   type RuntimeMode2,
+  isRemoteSandboxRuntimeMode,
 } from "@/lib/schemas";
 import type { AppRuntimeOutput } from "@/ipc/types/app_runtime";
 import type { ConsoleEntry } from "@/ipc/types/supabase";
@@ -303,7 +304,7 @@ export async function executeApp({
       startCommand,
       invocationRef,
     });
-  } else if (runtimeMode === "cloud") {
+  } else if (runtimeMode === "cloud" || runtimeMode === "e2b") {
     await executeAppInCloud({
       appPath,
       appId,
@@ -311,6 +312,7 @@ export async function executeApp({
       installCommand,
       startCommand,
       invocationRef,
+      runtimeMode,
     });
   } else {
     notifyPnpmVersionMigrationAvailable({ appPath, appId, output });
@@ -1193,6 +1195,7 @@ async function executeAppInCloud({
   installCommand,
   startCommand,
   invocationRef,
+  runtimeMode = "cloud",
 }: {
   appPath: string;
   appId: number;
@@ -1200,6 +1203,7 @@ async function executeAppInCloud({
   installCommand?: string | null;
   startCommand?: string | null;
   invocationRef?: AppRunInvocationRef;
+  runtimeMode?: RuntimeMode2;
 }): Promise<void> {
   const currentProcessId = processCounter.increment();
   let sandboxId: string | undefined;
@@ -1252,7 +1256,7 @@ async function executeAppInCloud({
     process: null,
     processId: currentProcessId,
     invocationRef,
-    mode: "cloud",
+    mode: runtimeMode,
     output,
     cloudSandboxId: sandboxId,
     cloudPreviewUrl: resolvedPreviewUrl,
@@ -1275,7 +1279,7 @@ async function executeAppInCloud({
     appId,
     output,
     originalUrl: resolvedPreviewUrl,
-    mode: "cloud",
+    mode: runtimeMode,
     invocationRef,
   });
 
@@ -1649,7 +1653,8 @@ export class AppRuntimeService {
       const appInfo = this.dependencies.getRunningApp(appId);
 
       if (
-        appInfo?.mode === "cloud" &&
+        appInfo &&
+        isRemoteSandboxRuntimeMode(appInfo.mode) &&
         appInfo.cloudSandboxId &&
         !recreateSandbox
       ) {
@@ -1724,7 +1729,7 @@ export class AppRuntimeService {
         );
         if (process) {
           this.dependencies.removeCurrentProcess(appId, process);
-        } else if (appInfo.mode !== "cloud") {
+        } else if (appInfo.mode !== "cloud" && appInfo.mode !== "e2b") {
           this.dependencies.deleteRunningApp(appId);
         }
         throw new DyadError(
@@ -1914,7 +1919,7 @@ export class AppRuntimeService {
       appId: input.appId,
       output: input.output,
       originalUrl: result.previewUrl,
-      mode: "cloud",
+      mode: input.appInfo.mode,
       invocationRef: input.invocationRef,
     });
     this.dependencies.startCloudLogs({

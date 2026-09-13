@@ -26,6 +26,7 @@ import { AutoUpdateSwitch } from "@/components/AutoUpdateSwitch";
 import { ReleaseChannelSelector } from "@/components/ReleaseChannelSelector";
 import { NeonIntegration } from "@/components/NeonIntegration";
 import { RuntimeModeSelector } from "@/components/RuntimeModeSelector";
+import { E2bSettingsSection } from "@/components/settings/E2bSettingsSection";
 import { NodePathSelector } from "@/components/NodePathSelector";
 import { AgentToolsSettings } from "@/components/settings/AgentToolsSettings";
 import { ZoomSelector } from "@/components/ZoomSelector";
@@ -179,6 +180,16 @@ export default function SettingsPage() {
             </div>
             <div id={SETTING_IDS.neon}>
               <NeonIntegration />
+            </div>
+          </SettingsSection>
+
+          <SettingsSection
+            id={SECTION_IDS.e2b}
+            title="E2B Sandboxes"
+            description="Run apps in remote E2B sandboxes with your own API key."
+          >
+            <div id={SETTING_IDS.e2bApiKey}>
+              <E2bSettingsSection />
             </div>
           </SettingsSection>
 

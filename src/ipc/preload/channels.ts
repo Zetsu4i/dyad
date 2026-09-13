@@ -63,6 +63,7 @@ import {
 } from "../types/app_blueprint";
 import { appCollectionContracts } from "../types/app_collections";
 import { terminalContracts } from "../types/terminal";
+import { e2bContracts } from "../types/e2b";
 import { testsContracts, testsEvents } from "../types/tests";
 import { recordingContracts, recordingEvents } from "../types/recording";
 import { userInputContracts, userInputEvents } from "../types/user_input";
@@ -147,6 +148,7 @@ export const VALID_INVOKE_CHANNELS = [
   ...getInvokeChannels(appBlueprintContracts),
   ...getInvokeChannels(appCollectionContracts),
   ...getInvokeChannels(terminalContracts),
+  ...getInvokeChannels(e2bContracts),
   ...getInvokeChannels(testsContracts),
   ...getInvokeChannels(recordingContracts),
   ...getInvokeChannels(userInputContracts),

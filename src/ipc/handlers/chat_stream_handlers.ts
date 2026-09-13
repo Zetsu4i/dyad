@@ -29,6 +29,7 @@ import {
   constructSystemPrompt,
   readAiRules,
 } from "../../prompts/system_prompt";
+import { isRunCommandToolAvailableForApp } from "../../pro/main/ipc/handlers/local_agent/tools/run_command";
 import {
   constructImplementerPrompt,
   resolveImplementerProvider,
@@ -2179,6 +2180,9 @@ ${componentSnippet}
           restartAppToolAvailable,
           reinstallAndRestartAppToolAvailable,
           runBuildToolAvailable,
+          runCommandToolAvailable: isRunCommandToolAvailableForApp(
+            updatedChat.app?.id,
+          ),
         });
 
         // Add information for any legacy caller that still injects full

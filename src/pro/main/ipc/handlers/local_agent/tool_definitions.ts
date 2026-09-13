@@ -34,6 +34,7 @@ import { webFetchTool } from "./tools/web_fetch";
 import { generateImageTool } from "./tools/generate_image";
 import { updateTodosTool } from "./tools/update_todos";
 import { runTypeChecksTool } from "./tools/run_type_checks";
+import { runCommandTool } from "./tools/run_command";
 import { runTestsTool } from "./tools/run_tests";
 import { runPreCommitTool } from "./tools/run_pre_commit";
 import { runBuildTool } from "./tools/run_build";
@@ -184,6 +185,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   generateTestAssertionsTool,
   restartAppTool,
   reinstallAndRestartAppTool,
+  runCommandTool,
   readGuideTool,
   executeSandboxScriptTool,
   searchMcpToolsTool,

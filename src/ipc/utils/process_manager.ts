@@ -198,7 +198,7 @@ export async function stopAppByInfo(
   try {
     stopCloudSandboxFileSync(appId);
 
-    if (appInfo.mode === "cloud") {
+    if (appInfo.mode === "cloud" || appInfo.mode === "e2b") {
       if (appInfo.cloudSandboxId) {
         await destroyCloudSandbox(appInfo.cloudSandboxId);
       }
@@ -459,7 +459,7 @@ export function stopAllAppsSync(): void {
       appInfo.proxyWorker = undefined;
     }
 
-    if (appInfo.mode === "cloud") {
+    if (appInfo.mode === "cloud" || appInfo.mode === "e2b") {
       appInfo.cloudLogAbortController?.abort();
       appInfo.cloudLogAbortController = undefined;
       stopCloudSandboxFileSync(appId);

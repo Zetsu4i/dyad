@@ -20,6 +20,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   { id: SECTION_IDS.providers, label: "Model Providers" },
   { id: SECTION_IDS.telemetry, label: "Telemetry" },
   { id: SECTION_IDS.integrations, label: "Integrations" },
+  { id: SECTION_IDS.e2b, label: "E2B Sandboxes" },
   { id: SECTION_IDS.agentPermissions, label: "Build and Agent Permissions" },
   { id: SECTION_IDS.advanced, label: "Advanced" },
   { id: SECTION_IDS.experiments, label: "Experiments" },

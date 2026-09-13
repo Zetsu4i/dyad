@@ -157,6 +157,7 @@ export {
 export { appBlueprintClient, appBlueprintEventClient } from "./app_blueprint";
 export { appCollectionClient } from "./app_collections";
 export { terminalClient } from "./terminal";
+export { e2bContracts, e2bClient } from "./e2b";
 export { testsClient, testsEventClient } from "./tests";
 export { userInputClient, userInputEventClient } from "./user_input";
 export { firstPromptClient } from "./first_prompt";
@@ -518,6 +519,7 @@ export { SubscriptionStatusSchema, UserBudgetInfoSchema } from "./system";
 // Aggregated IPC Client
 // =============================================================================
 
+import { e2bClient } from "./e2b";
 import { settingsClient } from "./settings";
 import { appClient } from "./app";
 import { chatClient, chatStreamClient } from "./chat";
@@ -641,6 +643,7 @@ export const ipc = {
   appBlueprint: appBlueprintClient,
   appCollection: appCollectionClient,
   terminal: terminalClient,
+  e2b: e2bClient,
   tests: testsClient,
   recording: recordingClient,
   userInput: userInputClient,

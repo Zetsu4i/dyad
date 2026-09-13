@@ -13,6 +13,7 @@ import { IS_TEST_BUILD } from "./test_utils";
 import { z } from "zod";
 import { isPathIgnoredByGitIgnore } from "./gitignore_utils";
 import { getDyadEngineBaseUrl } from "./dyad_engine_url";
+import { e2bCloudSandboxProvider } from "./e2b_sandbox_provider";
 
 const logger = log.scope("cloud_sandbox_provider");
 
@@ -829,8 +830,19 @@ class DyadEngineCloudSandboxProvider implements CloudSandboxProvider {
 const defaultProvider: CloudSandboxProvider =
   new DyadEngineCloudSandboxProvider();
 
+/**
+ * Returns the active remote-sandbox provider. When the E2B runtime mode is
+ * selected (Settings → General → Runtime Mode, with an E2B API key), all
+ * sandbox traffic routes to the user's E2B account instead of the Dyad engine.
+ */
+function getActiveCloudSandboxProvider(): CloudSandboxProvider {
+  return readSettings().runtimeMode2 === "e2b"
+    ? e2bCloudSandboxProvider
+    : defaultProvider;
+}
+
 export async function destroyCloudSandbox(sandboxId: string): Promise<void> {
-  await defaultProvider.destroySandbox(sandboxId);
+  await getActiveCloudSandboxProvider().destroySandbox(sandboxId);
 }
 
 export async function createCloudSandbox(input: {
@@ -839,7 +851,7 @@ export async function createCloudSandbox(input: {
   installCommand?: string | null;
   startCommand?: string | null;
 }) {
-  return defaultProvider.createSandbox(input);
+  return getActiveCloudSandboxProvider().createSandbox(input);
 }
 
 export async function uploadCloudSandboxFiles(input: {
@@ -848,34 +860,34 @@ export async function uploadCloudSandboxFiles(input: {
   replaceAll?: boolean;
   deletedFiles?: string[];
 }) {
-  return defaultProvider.uploadFiles(input.sandboxId, input.files, {
+  return getActiveCloudSandboxProvider().uploadFiles(input.sandboxId, input.files, {
     replaceAll: input.replaceAll,
     deletedFiles: input.deletedFiles,
   });
 }
 
 export async function restartCloudSandbox(sandboxId: string) {
-  return defaultProvider.restartSandbox(sandboxId);
+  return getActiveCloudSandboxProvider().restartSandbox(sandboxId);
 }
 
 export function streamCloudSandboxLogs(
   sandboxId: string,
   signal?: AbortSignal,
 ) {
-  return defaultProvider.streamLogs(sandboxId, signal);
+  return getActiveCloudSandboxProvider().streamLogs(sandboxId, signal);
 }
 
 export async function getCloudSandboxStatus(
   sandboxId: string,
 ): Promise<CloudSandboxStatus> {
-  return defaultProvider.getStatus(sandboxId);
+  return getActiveCloudSandboxProvider().getStatus(sandboxId);
 }
 
 export async function createCloudSandboxShareLink(
   sandboxId: string,
   options?: { expiresInSeconds?: number },
 ): Promise<CloudSandboxShareLink> {
-  return defaultProvider.createShareLink(sandboxId, options);
+  return getActiveCloudSandboxProvider().createShareLink(sandboxId, options);
 }
 
 export function setCloudSandboxSyncUpdateListener(

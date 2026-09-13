@@ -37,6 +37,21 @@ You are Dyad, an AI assistant that creates and modifies web applications. You as
 You make efficient and effective changes to codebases while following best practices for maintainability and readability. You take pride in keeping things simple and elegant. You are friendly and helpful, always aiming to provide clear explanations.
 </role>`;
 
+const E2B_RUN_COMMAND_BLOCK = `<remote_sandbox_execution>
+This project runs inside a remote E2B sandbox. The \`run_command\` tool executes shell commands inside that sandbox at /home/user/app, which always contains the latest synced project files.
+
+When to use \`run_command\`:
+- Run scripts, CLI tools, data processing, or any general shell task the project needs.
+- Inspect or verify anything that requires a real Linux environment (versions, processes, ports, files on disk).
+- Build, lint, or execute project code when a dedicated tool does not cover it.
+- Install system-level or extra tooling the project needs.
+
+How it relates to the other tools:
+- File-edit tools (write_file, search_replace) edit the local project and are synced into the sandbox automatically before commands run. Prefer them for any file that must persist in the project.
+- Files created inside the sandbox by commands do NOT sync back to the project. If a generated file must become part of the project, create it with write_file instead.
+- For installing npm dependencies prefer \`add_dependency\`; it updates package.json and installs inside the sandbox.
+- Do not start long-lived dev servers with \`run_command\`; the preview's dev server is managed for you.
+</remote_sandbox_execution>`;
 const APP_COMMANDS_BLOCK = `<app_commands>
 Do *not* tell the user to run shell commands. To refresh the app preview page without restarting its development server, suggest the Refresh command:
 
@@ -615,6 +630,7 @@ function buildLocalAgentSystemPrompt({
   restartAppToolAvailable,
   reinstallAndRestartAppToolAvailable,
   runBuildToolAvailable,
+  runCommandToolAvailable,
 }: {
   enableAppBlueprint: boolean;
   hasAppBlueprint: boolean;
@@ -629,12 +645,14 @@ function buildLocalAgentSystemPrompt({
   restartAppToolAvailable: boolean;
   reinstallAndRestartAppToolAvailable: boolean;
   runBuildToolAvailable: boolean;
+  runCommandToolAvailable: boolean;
 }): string {
   return `
 ${ROLE_BLOCK}
 
 ${APP_COMMANDS_BLOCK}
 
+${runCommandToolAvailable ? `${E2B_RUN_COMMAND_BLOCK}\n` : ""}
 ${appLifecycleBlock({ restartAppToolAvailable, reinstallAndRestartAppToolAvailable })}
 
 ${GENERAL_GUIDELINES_BLOCK}
@@ -671,12 +689,14 @@ function buildLocalAgentBasicSystemPrompt(
   restartAppToolAvailable: boolean,
   reinstallAndRestartAppToolAvailable: boolean,
   runBuildToolAvailable: boolean,
+  runCommandToolAvailable: boolean,
 ): string {
   return `
 ${ROLE_BLOCK}
 
 ${APP_COMMANDS_BLOCK}
 
+${runCommandToolAvailable ? `${E2B_RUN_COMMAND_BLOCK}\n` : ""}
 ${appLifecycleBlock({ restartAppToolAvailable, reinstallAndRestartAppToolAvailable })}
 
 ${GENERAL_GUIDELINES_BLOCK}
@@ -946,6 +966,7 @@ export function constructLocalAgentPrompt(
     restartAppToolAvailable?: boolean;
     reinstallAndRestartAppToolAvailable?: boolean;
     runBuildToolAvailable?: boolean;
+    runCommandToolAvailable?: boolean;
   },
 ): string {
   const enableAppBlueprint = options?.enableAppBlueprint === true;
@@ -964,6 +985,7 @@ export function constructLocalAgentPrompt(
   const reinstallAndRestartAppToolAvailable =
     options?.reinstallAndRestartAppToolAvailable !== false;
   const runBuildToolAvailable = options?.runBuildToolAvailable !== false;
+  const runCommandToolAvailable = options?.runCommandToolAvailable === true;
 
   // Select the appropriate base prompt
   let basePrompt: string;
@@ -981,6 +1003,7 @@ export function constructLocalAgentPrompt(
       restartAppToolAvailable,
       reinstallAndRestartAppToolAvailable,
       runBuildToolAvailable,
+      runCommandToolAvailable,
     );
   } else {
     basePrompt = buildLocalAgentSystemPrompt({
@@ -997,6 +1020,7 @@ export function constructLocalAgentPrompt(
       restartAppToolAvailable,
       reinstallAndRestartAppToolAvailable,
       runBuildToolAvailable,
+      runCommandToolAvailable,
     });
   }
 

@@ -199,7 +199,11 @@ function versionRuntimeAction(
   changedCodebase: boolean,
 ): "none" | "restart" {
   if (!changedCodebase) return "none";
-  return readSettings().runtimeMode2 === "cloud" || app.neonProjectId
+  return (
+    readSettings().runtimeMode2 === "cloud" ||
+    readSettings().runtimeMode2 === "e2b" ||
+    app.neonProjectId
+  )
     ? "restart"
     : "none";
 }

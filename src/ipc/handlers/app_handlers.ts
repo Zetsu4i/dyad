@@ -119,6 +119,7 @@ import {
   queueCloudSandboxSnapshotSync,
   reconcileCloudSandboxes,
 } from "../utils/cloud_sandbox_provider";
+import { reconcileE2bSandboxes } from "../utils/e2b_sandbox_provider";
 import { createFromTemplate } from "./createFromTemplate";
 import { getInitialChatModeForNewChat } from "./chat_mode_resolution";
 import { ensureDyadGitignored } from "./gitignoreUtils";
@@ -2619,6 +2620,12 @@ export function registerAppHandlers() {
 
   void reconcileCloudSandboxes().catch((error) => {
     logger.warn("Failed to reconcile cloud sandboxes on startup:", error);
+  });
+
+  // E2B runtime mode: pause any orphaned sandboxes from a crashed session so
+  // the user's account is not billed for compute while Dyad is closed.
+  void reconcileE2bSandboxes().catch((error) => {
+    logger.warn("Failed to reconcile E2B sandboxes on startup:", error);
   });
 
   // Test-only: flip needs_app_blueprint for an imported app so E2E tests can

@@ -154,8 +154,31 @@ export type VertexProviderSetting = z.infer<typeof VertexProviderSettingSchema>;
 export const RuntimeModeSchema = z.enum(["web-sandbox", "local-node", "unset"]);
 export type RuntimeMode = z.infer<typeof RuntimeModeSchema>;
 
-export const RuntimeMode2Schema = z.enum(["host", "docker", "cloud"]);
+export const RuntimeMode2Schema = z.enum(["host", "docker", "cloud", "e2b"]);
 export type RuntimeMode2 = z.infer<typeof RuntimeMode2Schema>;
+
+/**
+ * Returns true when the app runs user apps inside remote E2B sandboxes
+ * (user-supplied E2B API key, see Settings → E2B Sandboxes).
+ */
+export function isRemoteSandboxRuntimeMode(mode: RuntimeMode2): boolean {
+  return mode === "cloud" || mode === "e2b";
+}
+
+export const E2bSettingsSchema = z.object({
+  apiKey: SecretSchema.optional(),
+  // E2B sandbox template (defaults to "base" — Node 22 + common runtimes).
+  sandboxTemplate: z.string().optional(),
+  // Wall-clock safety timeout for a working sandbox before it auto-pauses.
+  timeoutMinutes: z.number().min(5).max(1440).optional(),
+});
+export type E2bSettings = z.infer<typeof E2bSettingsSchema>;
+
+export function isE2bSandboxConfigured(settings: {
+  e2b?: E2bSettings;
+}): boolean {
+  return !!settings.e2b?.apiKey?.value;
+}
 
 /**
  * Chat modes that can be stored in settings (includes deprecated values for backwards compat)
@@ -561,6 +584,8 @@ const BaseUserSettingsFields = {
   enableContextCompaction: z.boolean().optional(),
   skipNotificationBanner: z.boolean().optional(),
   previewIdleTimeoutPolicy: z.enum(["default", "never"]).optional(),
+  // E2B remote sandbox execution (BYO API key). See E2bSettingsSchema.
+  e2b: E2bSettingsSchema.optional(),
 };
 
 /**

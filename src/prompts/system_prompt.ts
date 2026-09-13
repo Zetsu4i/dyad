@@ -765,6 +765,7 @@ export const constructSystemPrompt = ({
   restartAppToolAvailable,
   reinstallAndRestartAppToolAvailable,
   runBuildToolAvailable,
+  runCommandToolAvailable,
 }: {
   aiRules: string | undefined;
   chatMode?: "build" | "ask" | "local-agent" | "plan";
@@ -821,6 +822,8 @@ export const constructSystemPrompt = ({
   restartAppToolAvailable?: boolean;
   reinstallAndRestartAppToolAvailable?: boolean;
   runBuildToolAvailable?: boolean;
+  /** Whether the E2B run_command tool is available for this turn. */
+  runCommandToolAvailable?: boolean;
 }) => {
   if (chatMode === "plan") {
     return constructPlanModePrompt(aiRules, themePrompt);
@@ -846,6 +849,7 @@ export const constructSystemPrompt = ({
       restartAppToolAvailable,
       reinstallAndRestartAppToolAvailable,
       runBuildToolAvailable,
+      runCommandToolAvailable,
     });
   }
 

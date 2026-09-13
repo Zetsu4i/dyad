@@ -5,6 +5,7 @@ export const SECTION_IDS = {
   providers: "provider-settings",
   telemetry: "telemetry",
   integrations: "integrations",
+  e2b: "e2b-sandboxes",
   agentPermissions: "agent-permissions",
   advanced: "advanced",
   experiments: "experiments",
@@ -12,6 +13,9 @@ export const SECTION_IDS = {
 } as const;
 
 export const SETTING_IDS = {
+  e2bApiKey: "setting-e2b-api-key",
+  e2bTemplate: "setting-e2b-sandbox-template",
+  e2bTimeout: "setting-e2b-timeout",
   theme: "setting-theme",
   zoom: "setting-zoom",
   autoUpdate: "setting-auto-update",
@@ -105,6 +109,30 @@ export const SETTINGS_SEARCH_INDEX: SearchableSettingItem[] = [
     keywords: ["node", "runtime", "bun", "environment"],
     sectionId: SECTION_IDS.general,
     sectionLabel: "General",
+  },
+  {
+    id: SETTING_IDS.e2bApiKey,
+    label: "E2B API Key",
+    description: "Configure the E2B API key for remote sandboxes",
+    keywords: ["e2b", "sandbox", "remote", "cloud", "api", "key", "execute"],
+    sectionId: SECTION_IDS.e2b,
+    sectionLabel: "E2B Sandboxes",
+  },
+  {
+    id: SETTING_IDS.e2bTemplate,
+    label: "E2B Sandbox Template",
+    description: "Choose the E2B sandbox template for new projects",
+    keywords: ["e2b", "sandbox", "template", "base"],
+    sectionId: SECTION_IDS.e2b,
+    sectionLabel: "E2B Sandboxes",
+  },
+  {
+    id: SETTING_IDS.e2bTimeout,
+    label: "E2B Session Timeout",
+    description: "Auto-pause sandboxes after inactivity",
+    keywords: ["e2b", "sandbox", "timeout", "pause", "billing", "idle"],
+    sectionId: SECTION_IDS.e2b,
+    sectionLabel: "E2B Sandboxes",
   },
   {
     id: SETTING_IDS.nodePath,

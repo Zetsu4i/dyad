@@ -342,7 +342,8 @@ export const PreviewIframe = ({
   //detect if the user is using Mac
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   const isCloudMode = mode === "cloud";
-  const isCloudSandboxMode = settings?.runtimeMode2 === "cloud";
+  const isCloudSandboxMode =
+    settings?.runtimeMode2 === "cloud" || settings?.runtimeMode2 === "e2b";
   const { mutate: clearSessionData } = useMutation({
     mutationFn: () => {
       return ipc.system.clearSessionData();
